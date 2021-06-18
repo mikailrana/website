@@ -83,9 +83,11 @@ function App() {
 
       var icon= FaRegPlayCircle
       var iconWidth = "230px"
+      /*
       if(selectedSong !== undefined && song.key === selectedSong.key) {
         iconWidth = "300px"
       }
+      */
       if (selectedSong !== undefined && playerState === "playing" && song.key === selectedSong.key) {
         icon = FaRegPauseCircle
       }
@@ -93,9 +95,9 @@ function App() {
         (
           <Box
             minWidth={iconWidth}
+            maxWidth={iconWidth}
             position="relative"
             width="100%"
-            paddingLeft="15px"
             paddingRight="15px"
             marginTop="5px"
             flex="0 0 25%"
@@ -144,7 +146,13 @@ function App() {
                   filter="drop-shadow( 3px 3px 2px rgba(0, 0, 0, .7));"
                 />
               </Box>
-              <Box pos="relative">
+              <Box pos="relative"
+                   fontSize={"14px"}
+                   fontWeight={700}
+                   textAlign={"center"}
+                   marginTop={"15px"}
+                   textTransform={"uppercase"}
+              >
                 {song.title}
               </Box>
 
@@ -158,7 +166,7 @@ function App() {
   return (
     <ChakraProvider theme={customTheme}>
       <DarkMode>
-        <Box>
+        <Box fontFamily={"Roboto"}>
           <Box padding={"24px"} _after={{boxSizing: "border-box"}}>
             <Box minHeight={"50vh"} maxHeight={"200px"}
                  backgroundImage={bkgImg} backgroundSize={"cover"}
@@ -210,7 +218,19 @@ function App() {
               </Box>
             </Box>
             <Box
-              paddingTop="70px"
+              m={"30px 0 15px 0"}
+              fontFamily={"'Raleway', sans-serif"}
+              fontWeight={700}
+              fontSize={"40px"}
+              lineHeight={"100%"}>
+              Featured Music
+            </Box>
+            <Box
+              fontSize={"19px"}
+              fontWeight={300}
+            >Synth Beats</Box>
+            <Box
+              paddingTop="20px"
               paddingBottom="70px"
               overflowX="auto"
               width="100%"
