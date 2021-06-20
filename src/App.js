@@ -1,10 +1,11 @@
 import React from 'react';
 import {
+  AspectRatio,
   ChakraProvider,
   Box,
   Icon,
   Text,
-  Link,
+  Link, Image,
   VStack,
   Code,
   Grid,
@@ -12,7 +13,8 @@ import {
   extendTheme,
   ThemeConfig,
   DarkMode,
-  ColorModeScript
+  ColorModeScript,
+  SimpleGrid
 } from '@chakra-ui/react';
 import { ColorModeSwitcher } from "./ColorModeSwitcher"
 import { Logo } from "./Logo"
@@ -24,7 +26,7 @@ import H5AudioPlayer from "react-h5-audio-player";
 import 'react-h5-audio-player/src/styles.scss'
 
 const config = {
-  initialColorMode: "dark",
+  initialColorMode: "light",
   useSystemColorMode: false,
 }
 
@@ -40,6 +42,82 @@ const customTheme = extendTheme({
     }
   }
 })
+
+let iconWidth="230px"
+let iconWidth_Buffer="250px"
+
+function SectionButton(props) {
+    return (
+        <Link href={props.linkURL}
+              width={['100%','100%',iconWidth - 15]}
+              minWidth={iconWidth}
+        >
+          <AspectRatio maxW={['100%','100%',iconWidth]} ratio={1 / 1}>
+            <Image
+                maxHeight={"100%"}
+                maxWidth={"auto"}
+                paddingLeft={"5px"}
+                paddingRight={"5px"}
+                aspectRatio={"1"}
+                margin={"0 auto"}
+            textDecoration='none'
+            src={props.imageURL}/>
+          </AspectRatio>
+            <Box
+                fontWeight={"700"}
+                fontSize={"14px"}
+                textAlign={"center"}
+                color={"black"}
+                >
+                {props.text}
+            </Box>
+        </Link>
+    )
+}
+
+function SectionHeader(props) {
+  return (
+      <Box
+          m={"30px 0 15px 0"}
+          fontFamily={"'Raleway', sans-serif"}
+          fontWeight={700}
+          fontSize={"40px"}
+          lineHeight={"100%"}>
+        {props.title}
+      </Box>
+  )
+}
+
+function SectionCategory(props) {
+  return (
+      <Box
+          fontSize={"19px"}
+          fontWeight={300}
+      >{props.title}</Box>
+  )
+}
+
+function MusicCarousel(props) {
+  return (
+
+      <Box
+          minHeight={iconWidth_Buffer}
+          paddingTop="20px"
+          marginBottom={"20px"}
+          overflowX="auto"
+          width="100%"
+          paddingRight="15px"
+      >
+        <Box
+            display="flex"
+            flexWrap="nowrap"
+        >
+          {props.children}
+        </Box>
+      </Box>
+  )
+
+}
 
 function App() {
 
@@ -82,7 +160,6 @@ function App() {
       */
 
       var icon= FaRegPlayCircle
-      var iconWidth = "230px"
       /*
       if(selectedSong !== undefined && song.key === selectedSong.key) {
         iconWidth = "300px"
@@ -217,34 +294,44 @@ function App() {
                 </Box>
               </Box>
             </Box>
-            <Box
-              m={"30px 0 15px 0"}
-              fontFamily={"'Raleway', sans-serif"}
-              fontWeight={700}
-              fontSize={"40px"}
-              lineHeight={"100%"}>
-              Featured Music
-            </Box>
-            <Box
-              fontSize={"19px"}
-              fontWeight={300}
-            >Synth Beats</Box>
-            <Box
-              paddingTop="20px"
-              paddingBottom="70px"
-              overflowX="auto"
-              width="100%"
-              paddingLeft="15px"
-              paddingRight="15px"
-            >
-              <Box
-                display="flex"
-                flexWrap="nowrap"
-              >
+
+            <SectionHeader title={"Featured Music"}/>
+            <SectionCategory title={"Synth Beats"} />
+            <MusicCarousel>
                 {cards}
-              </Box>
-            </Box>
+            </MusicCarousel>
+            <SectionCategory title={"Some Other Description"} />
+            <MusicCarousel>
+              {cards}
+            </MusicCarousel>
+
+            <SectionHeader title={"Projects"}/>
+            <SectionCategory title={"Made in JS and Python"} />
+            <SimpleGrid columns={[1,2]} >
+              <SimpleGrid columns={[1,2,3,4]} width={["100%","480px","720px","920px"]} columnGap={"15px"} maxWidth={iconWidth * 4} >
+                <SectionButton text={"Text Description"}
+                               imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
+                               linkURL={"https://chakra-ui.com/"} />
+                <SectionButton text={"Text Description"}
+                               imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
+                               linkURL={"https://chakra-ui.com/"} />
+                <SectionButton text={"Text Description"}
+                               imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
+                               linkURL={"https://chakra-ui.com/"} />
+                <SectionButton text={"Text Description"}
+                               imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
+                               linkURL={"https://chakra-ui.com/"} />
+
+              <SectionButton text={"Text Description"}
+                             imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
+                             linkURL={"https://chakra-ui.com/"} />
+              </SimpleGrid>
+              <Box width={["0px","1px"]} />
+            </SimpleGrid>
+            <Box paddingTop={"40px"}/>
           </Box>
+
+          // H5 Player Timeline
           <div className="timeline rounded" style={{backgroundColor:'black',paddingBottom:'0px',position:'fixed',left:1,bottom:'0',zIndex:100,width:'100%'}}>
             <div className="rounded" style={{height:'80px',backgroundColor:'white'}}>
               <H5AudioPlayer
