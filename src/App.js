@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  chakra,
   AspectRatio,
   ChakraProvider,
   Box,
@@ -22,8 +23,7 @@ import  bkgImg  from "../src/assets/img/david-marcu.jpg"
 import  albumImage  from "../src/assets/img/miguel-perales.jpg"
 import {FaBeer, FaRegPauseCircle, FaRegPlayCircle} from 'react-icons/fa';
 import fb from "firebase";
-import H5AudioPlayer from "react-h5-audio-player";
-import 'react-h5-audio-player/src/styles.scss'
+import {CircleViz,Scene,AudioPlayer} from "./Viz.js"
 
 const config = {
   initialColorMode: "light",
@@ -45,6 +45,7 @@ const customTheme = extendTheme({
 
 let iconWidth="230px"
 let iconWidth_Buffer="250px"
+let canvasWidth=215;
 
 function SectionButton(props) {
     return (
@@ -116,23 +117,39 @@ function MusicCarousel(props) {
         </Box>
       </Box>
   )
-
 }
+
+
+let viz    = new CircleViz();
+let player = new AudioPlayer();
 
 function App() {
 
   const [songs, setSongs] = React.useState(undefined);
   const [selectedSong, setSelectedSong] = React.useState(undefined);
-  const audioPlayerRef = React.useRef(undefined)
   const [playerState,setPlayerState] = React.useState("paused");
   const [audioContext,setAudioContext] = React.useState(undefined);
   const [audioAnalyser,setAudioAnalyser] = React.useState(undefined);
+  const canvasRef = React.useRef(null);
+  let scene = undefined;
+
+  let playSong = (songObject)=> {
+    setSelectedSong(songObject);
+    player.playSong(songObject.audioURL,viz);
+  }
 
   React.useEffect(() => {
-    if (audioPlayerRef.current !== null && audioContext === undefined) {
-      // @ts-ignore
-      audioPlayerRef.current.audio.current.crossOrigin = "anonymous";
+    scene  = new Scene(player,viz,canvasRef,canvasWidth);
+    player.playerStateCallback = (state) => {
+      setPlayerState(state);
     }
+
+    /*
+    if (audioElementRef.current !== null && audioContext === undefined) {
+      // @ts-ignore
+      audioElementRef.current.audio.current.crossOrigin = "anonymous";
+    }
+    */
   });
 
   if (songs === undefined) {
@@ -143,7 +160,7 @@ function App() {
         querySnapshot.forEach((doc) => {
           music.push(doc.data())
         });
-        console.log(music);
+        //console.log(music);
         setSongs(music);
       })
   }
@@ -165,8 +182,22 @@ function App() {
         iconWidth = "300px"
       }
       */
+      let canvas = undefined;
+      let Canvas = chakra('canvas');
+      console.log({playerState});
       if (selectedSong !== undefined && playerState === "playing" && song.key === selectedSong.key) {
         icon = FaRegPauseCircle
+        canvas = (
+          <Canvas
+            opacity={".5"}
+            pos="absolute"
+            zIndex={1000}
+            id='Player-canvas'
+            key='Player-canvas'
+            ref={canvasRef}
+            width={iconWidth}
+            height={iconWidth} >
+          </Canvas>);
       }
       cards.push(
         (
@@ -180,6 +211,8 @@ function App() {
             flex="0 0 25%"
             key={song.key}
           >
+            {canvas}
+
             <Box display="flex"
                  flexDirection="column"
                  position="relative"
@@ -196,18 +229,7 @@ function App() {
 
                 }}
                 onClick={() => {
-                  if (playerState === "paused") {
-                    setSelectedSong(song)
-                  }
-                  else {
-                    if (selectedSong !== undefined && selectedSong.key === song.key) {
-                      setSelectedSong(undefined)
-                    }
-                    else {
-                      setSelectedSong(song)
-                    }
-
-                  }
+                  playSong(song);
                 }}
 
               >
@@ -300,10 +322,6 @@ function App() {
             <MusicCarousel>
                 {cards}
             </MusicCarousel>
-            <SectionCategory title={"Some Other Description"} />
-            <MusicCarousel>
-              {cards}
-            </MusicCarousel>
 
             <SectionHeader title={"Projects"}/>
             <SectionCategory title={"Made in JS and Python"} />
@@ -330,22 +348,6 @@ function App() {
             </SimpleGrid>
             <Box paddingTop={"40px"}/>
           </Box>
-
-          // H5 Player Timeline
-          <div className="timeline rounded" style={{backgroundColor:'black',paddingBottom:'0px',position:'fixed',left:1,bottom:'0',zIndex:100,width:'100%'}}>
-            <div className="rounded" style={{height:'80px',backgroundColor:'white'}}>
-              <H5AudioPlayer
-                ref={audioPlayerRef}
-                src={(selectedSong === undefined) ? "" : selectedSong.audioURL}
-                layout={"stacked"}
-                onPause={() => {setPlayerState("paused")}}
-                onPlay={() => {setPlayerState("playing")
-                  //audioContext.resume()
-                }}
-                onEnded={(e) => {setPlayerState("paused")}}
-              />
-            </div>
-          </div>
         </Box>
       </DarkMode>
     </ChakraProvider>
