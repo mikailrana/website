@@ -166,17 +166,24 @@ function App() {
   }
 
   var cards = [];
-
+  let categoryMap = new Map();
+  let carouselSections = [];
   if (songs !== undefined) {
-    songs.forEach(song =>  {
+    songs.forEach(song => {
+      let category = "unknown";
+      let categories = song.category.split(",");
+      if (categories.length) category = categories[0];
+      if (!categoryMap.has(category))
+        categoryMap.set(category, []);
       song.key = song.file
+
       /*
       if (process.env.NODE_ENV === "development") {
         song.url = song.url.replace(/^https:\/\/firebasestorage.googleapis.com/, '/fbs');
       }
       */
 
-      var icon= FaRegPlayCircle
+      var icon = FaRegPlayCircle
       /*
       if(selectedSong !== undefined && song.key === selectedSong.key) {
         iconWidth = "300px"
@@ -184,7 +191,7 @@ function App() {
       */
       let canvas = undefined;
       let Canvas = chakra('canvas');
-      console.log({playerState});
+      console.log({ playerState });
       if (selectedSong !== undefined && playerState === "playing" && song.key === selectedSong.key) {
         icon = FaRegPauseCircle
         canvas = (
@@ -196,72 +203,78 @@ function App() {
             key='Player-canvas'
             ref={canvasRef}
             width={iconWidth}
-            height={iconWidth} >
+            height={iconWidth}>
           </Canvas>);
       }
-      cards.push(
-        (
-          <Box
-            minWidth={iconWidth}
-            maxWidth={iconWidth}
-            position="relative"
-            width="100%"
-            paddingRight="15px"
-            marginTop="5px"
-            flex="0 0 25%"
-            key={song.key}
+      let fragment = (
+        <Box
+          minWidth={iconWidth}
+          maxWidth={iconWidth}
+          position="relative"
+          width="100%"
+          paddingRight="15px"
+          marginTop="5px"
+          flex="0 0 25%"
+          key={song.key}
+        >
+          {canvas}
+
+          <Box display="flex"
+               flexDirection="column"
+               position="relative"
           >
-            {canvas}
+            <Box
+              backgroundImage={song.imageURL}
+              backgroundSize="cover"
+              width="100%"
+              position="relative"
+              _after={{
+                content: `""`,
+                display: "block",
+                paddingBottom: "100%"
 
-            <Box display="flex"
-                 flexDirection="column"
-                 position="relative"
+              }}
+              onClick={() => {
+                playSong(song);
+              }}
+
             >
-              <Box
-                backgroundImage={song.imageURL}
-                backgroundSize="cover"
-                width="100%"
-                position="relative"
-                _after={{
-                  content: `""`,
-                  display: "block",
-                  paddingBottom: "100%"
-
-                }}
-                onClick={() => {
-                  playSong(song);
-                }}
-
-              >
-                <Icon
-                  as={icon}
-                  pos="absolute"
-                  top="50%"
-                  left="50%"
-                  transform="translate(-50%, -50%)"
-                  fontSize="3.5em"
-                  opacity="1.0"
-                  textShadow="rgb(59 89 152) 0px 0px 15px"
-                  filter="drop-shadow( 3px 3px 2px rgba(0, 0, 0, .7));"
-                />
-              </Box>
-              <Box pos="relative"
-                   fontSize={"14px"}
-                   fontWeight={700}
-                   textAlign={"center"}
-                   marginTop={"15px"}
-                   textTransform={"uppercase"}
-              >
-                {song.title}
-              </Box>
-
+              <Icon
+                as={icon}
+                pos="absolute"
+                top="50%"
+                left="50%"
+                transform="translate(-50%, -50%)"
+                fontSize="3.5em"
+                opacity="1.0"
+                textShadow="rgb(59 89 152) 0px 0px 15px"
+                filter="drop-shadow( 3px 3px 2px rgba(0, 0, 0, .7));"
+              />
             </Box>
-          </Box>
-        )
-      )
-    })
-  }
+            <Box pos="relative"
+                 fontSize={"14px"}
+                 fontWeight={700}
+                 textAlign={"center"}
+                 marginTop={"15px"}
+                 textTransform={"uppercase"}
+            >
+              {song.title}
+            </Box>
 
+          </Box>
+        </Box>
+      );
+      categoryMap.get(category).push(fragment);
+    })
+    for (const [category,cards] of categoryMap) {
+      carouselSections.push((<SectionCategory title={category} />));
+      carouselSections.push((
+            <MusicCarousel>
+              {cards}
+            </MusicCarousel>));
+    }
+  console.log(carouselSections);
+  }
   return (
     <ChakraProvider theme={customTheme}>
       <DarkMode>
@@ -318,11 +331,7 @@ function App() {
             </Box>
 
             <SectionHeader title={"Featured Music"}/>
-            <SectionCategory title={"Synth Beats"} />
-            <MusicCarousel>
-                {cards}
-            </MusicCarousel>
-
+              {carouselSections}
             <SectionHeader title={"Projects"}/>
             <SectionCategory title={"Made in JS and Python"} />
             <SimpleGrid columns={[1,2]} >
