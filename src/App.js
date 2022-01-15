@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  chakra,
   AspectRatio,
   ChakraProvider,
   Box,
@@ -22,8 +23,7 @@ import  bkgImg  from "../src/assets/img/david-marcu.jpg"
 import  albumImage  from "../src/assets/img/miguel-perales.jpg"
 import {FaBeer, FaRegPauseCircle, FaRegPlayCircle} from 'react-icons/fa';
 import fb from "firebase";
-import H5AudioPlayer from "react-h5-audio-player";
-import 'react-h5-audio-player/src/styles.scss'
+import {CircleViz,Scene,AudioPlayer} from "./Viz.js"
 
 const config = {
   initialColorMode: "light",
@@ -45,6 +45,8 @@ const customTheme = extendTheme({
 
 let iconWidth="230px"
 let iconWidth_Buffer="250px"
+let canvasWidth=215;
+let canvasWidthPx = "215px";
 
 function SectionButton(props) {
     return (
@@ -116,23 +118,49 @@ function MusicCarousel(props) {
         </Box>
       </Box>
   )
-
 }
+
+let viz    = new CircleViz();
+let player = new AudioPlayer();
 
 function App() {
 
   const [songs, setSongs] = React.useState(undefined);
   const [selectedSong, setSelectedSong] = React.useState(undefined);
-  const audioPlayerRef = React.useRef(undefined)
   const [playerState,setPlayerState] = React.useState("paused");
   const [audioContext,setAudioContext] = React.useState(undefined);
   const [audioAnalyser,setAudioAnalyser] = React.useState(undefined);
+  const canvasRef = React.useRef(null);
+  let scene = undefined;
+
+  let playSong = (songObject)=> {
+    if (selectedSong === songObject){
+      if (player.isPlaying()) {
+        player.pauseSong();
+      }
+      else{
+        player.resumeSong();
+      }
+    }
+    else{
+      setSelectedSong(songObject);
+      player.playSong(songObject.audioURL,viz);
+    }
+
+  }
 
   React.useEffect(() => {
-    if (audioPlayerRef.current !== null && audioContext === undefined) {
-      // @ts-ignore
-      audioPlayerRef.current.audio.current.crossOrigin = "anonymous";
+    scene  = new Scene(player,viz,canvasRef,canvasWidth);
+    player.playerStateCallback = (state) => {
+      setPlayerState(state);
     }
+
+    /*
+    if (audioElementRef.current !== null && audioContext === undefined) {
+      // @ts-ignore
+      audioElementRef.current.audio.current.crossOrigin = "anonymous";
+    }
+    */
   });
 
   if (songs === undefined) {
@@ -143,103 +171,128 @@ function App() {
         querySnapshot.forEach((doc) => {
           music.push(doc.data())
         });
-        console.log(music);
+        //console.log(music);
         setSongs(music);
       })
   }
 
   var cards = [];
-
+  let categoryMap = new Map();
+  let carouselSections = [];
   if (songs !== undefined) {
-    songs.forEach(song =>  {
+    songs.forEach(song => {
+
+      let category = "unknown";
+      let categories = song.category.split(",");
+      if (categories.length) category = categories[0];
+      if (!categoryMap.has(category))
+        categoryMap.set(category, []);
       song.key = song.file
+
       /*
       if (process.env.NODE_ENV === "development") {
         song.url = song.url.replace(/^https:\/\/firebasestorage.googleapis.com/, '/fbs');
       }
       */
 
-      var icon= FaRegPlayCircle
+      var icon = FaRegPlayCircle
       /*
       if(selectedSong !== undefined && song.key === selectedSong.key) {
         iconWidth = "300px"
       }
       */
+      let canvas = undefined;
+      let Canvas = chakra('canvas');
+      console.log({ playerState });
       if (selectedSong !== undefined && playerState === "playing" && song.key === selectedSong.key) {
         icon = FaRegPauseCircle
-      }
-      cards.push(
-        (
-          <Box
-            minWidth={iconWidth}
-            maxWidth={iconWidth}
-            position="relative"
-            width="100%"
-            paddingRight="15px"
-            marginTop="5px"
-            flex="0 0 25%"
-            key={song.key}
+        canvas = (
+          <Canvas
+            opacity={".5"}
+            pos="absolute"
+            zIndex={1000}
+            id='Player-canvas'
+            key='Player-canvas'
+            ref={canvasRef}
+            width={canvasWidthPx}
+            height={canvasWidthPx}
+            onClick={() => {
+              playSong(song);
+            }}
+
           >
-            <Box display="flex"
-                 flexDirection="column"
-                 position="relative"
+          </Canvas>);
+      }
+      let fragment = (
+        <Box
+          minWidth={iconWidth}
+          maxWidth={iconWidth}
+          position="relative"
+          width="100%"
+          paddingRight="15px"
+          marginTop="5px"
+          flex="0 0 25%"
+          key={song.key}
+        >
+          {canvas}
+
+          <Box display="flex"
+               flexDirection="column"
+               position="relative"
+          >
+            <Box
+              backgroundImage={song.imageURL}
+              backgroundSize="cover"
+              width="100%"
+              position="relative"
+              _after={{
+                content: `""`,
+                display: "block",
+                paddingBottom: "100%"
+
+              }}
+              onClick={() => {
+                playSong(song);
+              }}
+
             >
-              <Box
-                backgroundImage={song.imageURL}
-                backgroundSize="cover"
-                width="100%"
-                position="relative"
-                _after={{
-                  content: `""`,
-                  display: "block",
-                  paddingBottom: "100%"
-
-                }}
-                onClick={() => {
-                  if (playerState === "paused") {
-                    setSelectedSong(song)
-                  }
-                  else {
-                    if (selectedSong !== undefined && selectedSong.key === song.key) {
-                      setSelectedSong(undefined)
-                    }
-                    else {
-                      setSelectedSong(song)
-                    }
-
-                  }
-                }}
-
-              >
-                <Icon
-                  as={icon}
-                  pos="absolute"
-                  top="50%"
-                  left="50%"
-                  transform="translate(-50%, -50%)"
-                  fontSize="3.5em"
-                  opacity="1.0"
-                  textShadow="rgb(59 89 152) 0px 0px 15px"
-                  filter="drop-shadow( 3px 3px 2px rgba(0, 0, 0, .7));"
-                />
-              </Box>
-              <Box pos="relative"
-                   fontSize={"14px"}
-                   fontWeight={700}
-                   textAlign={"center"}
-                   marginTop={"15px"}
-                   textTransform={"uppercase"}
-              >
-                {song.title}
-              </Box>
-
+              <Icon
+                as={icon}
+                color={"white"}
+                pos="absolute"
+                top="50%"
+                left="50%"
+                transform="translate(-50%, -50%)"
+                fontSize="3.5em"
+                opacity="1.0"
+                textShadow="rgb(59 89 152) 0px 0px 15px"
+                filter="drop-shadow( 3px 3px 2px rgba(0, 0, 0, .7));"
+              />
             </Box>
-          </Box>
-        )
-      )
-    })
-  }
+            <Box pos="relative"
+                 fontSize={"14px"}
+                 fontWeight={700}
+                 textAlign={"center"}
+                 marginTop={"15px"}
+                 textTransform={"uppercase"}
+            >
+              {song.title}
+            </Box>
 
+          </Box>
+        </Box>
+      );
+      categoryMap.get(category).push(fragment);
+    })
+    for (const [category,cards] of categoryMap) {
+      carouselSections.push((<SectionCategory title={category} />));
+      carouselSections.push((
+            <MusicCarousel>
+              {cards}
+            </MusicCarousel>));
+    }
+  console.log(carouselSections);
+  }
   return (
     <ChakraProvider theme={customTheme}>
       <DarkMode>
@@ -296,15 +349,7 @@ function App() {
             </Box>
 
             <SectionHeader title={"Featured Music"}/>
-            <SectionCategory title={"Synth Beats"} />
-            <MusicCarousel>
-                {cards}
-            </MusicCarousel>
-            <SectionCategory title={"Some Other Description"} />
-            <MusicCarousel>
-              {cards}
-            </MusicCarousel>
-
+              {carouselSections}
             <SectionHeader title={"Projects"}/>
             <SectionCategory title={"Made in JS and Python"} />
             <SimpleGrid columns={[1,2]} >
@@ -330,22 +375,6 @@ function App() {
             </SimpleGrid>
             <Box paddingTop={"40px"}/>
           </Box>
-
-          // H5 Player Timeline
-          <div className="timeline rounded" style={{backgroundColor:'black',paddingBottom:'0px',position:'fixed',left:1,bottom:'0',zIndex:100,width:'100%'}}>
-            <div className="rounded" style={{height:'80px',backgroundColor:'white'}}>
-              <H5AudioPlayer
-                ref={audioPlayerRef}
-                src={(selectedSong === undefined) ? "" : selectedSong.audioURL}
-                layout={"stacked"}
-                onPause={() => {setPlayerState("paused")}}
-                onPlay={() => {setPlayerState("playing")
-                  //audioContext.resume()
-                }}
-                onEnded={(e) => {setPlayerState("paused")}}
-              />
-            </div>
-          </div>
         </Box>
       </DarkMode>
     </ChakraProvider>
