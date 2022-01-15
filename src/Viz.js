@@ -1,4 +1,3 @@
-import React from 'react';
 
 export class AudioPlayer  {
   constructor() {
@@ -17,7 +16,6 @@ export class AudioPlayer  {
     this.playerStateCallback = undefined;
     this.frequencyData = undefined;
   }
-
 
   init() {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -507,11 +505,13 @@ export class CircleViz {
           if (animationParams[0] <= tick.angle && tick.angle <=  animationParams[1]) {
             k = this.scene.radius / (this.scene.radius - this.getSize(tick.angle, animationParams[0], animationParams[1]) - delta);
           } else
-          */
           {
+          */
             // k is
             k = this.scene.radius / (this.scene.radius - (size + delta));
+          /*
           }
+           */
           x1 = tick.x * (this.scene.radius - size); // scale up point to (radius - tick size)
           y1 = tick.y * (this.scene.radius - size); // scale up point to (radius - tick size)
           x2 = x1 * k;
@@ -527,10 +527,13 @@ export class CircleViz {
           allScales.push(scale);
         }
       }
+      /*
       var sum = allScales.reduce(function(pv, cv) {
         return pv + cv;
       }, 0) / allScales.length;
-      //this.canvas.style.transform = 'scale('+sum+')';
+      this.canvas.style.transform = 'scale('+sum+')';
+      */
+
     }
     return m;
   }
