@@ -5,24 +5,13 @@ import {
   ChakraProvider,
   Box,
   Icon,
-  Text,
   Link, Image,
-  VStack,
-  Code,
-  Grid,
-  theme,
   extendTheme,
-  ThemeConfig,
   DarkMode,
-  ColorModeScript,
   SimpleGrid
 } from '@chakra-ui/react';
-import { ColorModeSwitcher } from "./ColorModeSwitcher"
-import { Logo } from "./Logo"
 import  bkgImg  from "../src/assets/img/david-marcu.jpg"
-import  albumImage  from "../src/assets/img/miguel-perales.jpg"
-import {FaBeer, FaRegPauseCircle, FaRegPlayCircle} from 'react-icons/fa';
-import fb from "firebase";
+import {FaRegPauseCircle, FaRegPlayCircle} from 'react-icons/fa';
 import {CircleViz,Scene,AudioPlayer} from "./Viz.js"
 
 const config = {
@@ -128,10 +117,7 @@ function App() {
   const [songs, setSongs] = React.useState(undefined);
   const [selectedSong, setSelectedSong] = React.useState(undefined);
   const [playerState,setPlayerState] = React.useState("paused");
-  const [audioContext,setAudioContext] = React.useState(undefined);
-  const [audioAnalyser,setAudioAnalyser] = React.useState(undefined);
   const canvasRef = React.useRef(null);
-  let scene = undefined;
 
   let playSong = (songObject)=> {
     if (selectedSong === songObject){
@@ -150,7 +136,7 @@ function App() {
   }
 
   React.useEffect(() => {
-    scene  = new Scene(player,viz,canvasRef,canvasWidth);
+    new Scene(player,viz,canvasRef,canvasWidth);
     player.playerStateCallback = (state) => {
       setPlayerState(state);
     }
@@ -167,7 +153,7 @@ function App() {
     var musicCollectionRef = firebase.firestore().collection("music2");
     musicCollectionRef.get().then(
       (querySnapshot) => {
-        var music = Array()
+        var music = []
         querySnapshot.forEach((doc) => {
           music.push(doc.data())
         });
@@ -176,7 +162,6 @@ function App() {
       })
   }
 
-  var cards = [];
   let categoryMap = new Map();
   let carouselSections = [];
   if (songs !== undefined) {
