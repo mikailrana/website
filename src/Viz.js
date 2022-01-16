@@ -27,7 +27,10 @@ export class AudioPlayer  {
     // create audio context ... has to be via onclick event
     this.context = new AudioContext({latencyHint:"playback"});
     this.context.resume();
+    //create analyser node
+    this.analyser = this.context.createAnalyser();
 
+    /*
     if (this.context.suspend)
       this.context.suspend();
 
@@ -54,6 +57,8 @@ export class AudioPlayer  {
       this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
       this.analyser.getByteFrequencyData(this.frequencyData);
     };
+
+     */
     this.firstLaunch = false;
   }
 
@@ -87,6 +92,8 @@ export class AudioPlayer  {
 
     //this.source.buffer = buffer;
     this.playing=true;
+
+    /*
     //let source = this.source;
     //this.source.onended = () => this.playbackStopped(source);
     //this.source.start();
@@ -96,6 +103,8 @@ export class AudioPlayer  {
     //this.gainNode.connect(this.destination);
     //this.analyser.connect(this.destination);
     this.analyser.connect(this.destination);
+
+     */
     this.audioObject.load();
     this.audioObject.play();
 
