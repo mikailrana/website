@@ -119,7 +119,7 @@ function App() {
   const [playerState,setPlayerState] = React.useState("paused");
   const canvasRef = React.useRef(null);
 
-  let playSong = (songObject)=> {
+  let playSong = (songObject,audioElementRef)=> {
     if (selectedSong === songObject){
       if (player.isPlaying()) {
         player.pauseSong();
@@ -130,7 +130,7 @@ function App() {
     }
     else{
       setSelectedSong(songObject);
-      player.playSong(songObject.audioURL,viz);
+      player.playSong(songObject.audioURL,audioElementRef);
     }
 
   }
@@ -166,6 +166,7 @@ function App() {
   let carouselSections = [];
   if (songs !== undefined) {
     songs.forEach(song => {
+      let audioElementRef = React.createRef();
 
       let category = "unknown";
       let categories = song.category.split(",");
@@ -202,7 +203,7 @@ function App() {
             width={canvasWidthPx}
             height={canvasWidthPx}
             onClick={() => {
-              playSong(song);
+              playSong(song,audioElementRef);
             }}
 
           >
@@ -219,6 +220,7 @@ function App() {
           flex="0 0 25%"
           key={song.key}
         >
+          <audio src={song.audioURL} ref={audioElementRef} crossorigin={"anonymous"} preload={"metadata"} ></audio>
           {canvas}
 
           <Box display="flex"
@@ -237,7 +239,7 @@ function App() {
 
               }}
               onClick={() => {
-                playSong(song);
+                playSong(song,audioElementRef);
               }}
 
             >
@@ -281,6 +283,7 @@ function App() {
   return (
     <ChakraProvider theme={customTheme}>
       <DarkMode>
+        <audio id={AudioPlayer.AudioPlayerId} crossOrigin={"anonymous"} />
         <Box fontFamily={"Roboto"}>
           <Box padding={"24px"} _after={{boxSizing: "border-box"}}>
             <Box minHeight={"50vh"} maxHeight={"200px"}

@@ -1,6 +1,10 @@
 
 export class AudioPlayer  {
+
+  static AudioPlayerId="AudioPlayer_AudioObject";
+
   constructor() {
+    this.audioObject=null;
     this.context=undefined;
     this.scriptNode=undefined;
     this.analyser=undefined;
@@ -18,11 +22,20 @@ export class AudioPlayer  {
   }
 
   init() {
+    this.audioObject=document.getElementById(AudioPlayer.AudioPlayerId);
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     // create audio context ... has to be via onclick event
-    this.context = new AudioContext();
+    this.context = new AudioContext({latencyHint:"playback"});
+    this.context.resume();
+
     if (this.context.suspend)
       this.context.suspend();
+
+    // create buffer source object
+    if (this.audioObject !== null) {
+      this.source = this.context.createMediaElementSource(this.audioObject);
+    }
+
     this.gainNode = this.context.createGain();
     // create script node to process buffer chunks for fft processing
     this.scriptNode = this.context.createScriptProcessor(2048, 1, 1);
@@ -30,11 +43,12 @@ export class AudioPlayer  {
     //create analyser node
     this.analyser = this.context.createAnalyser();
     // connect analyser to script node
-    this.analyser.connect(this.scriptNode);
+    //this.analyser.connect(this.scriptNode);
     // todo: what does this do ?
     this.analyser.smoothingTimeConstant = 0.6;
     // define fft size
     this.analyser.fftSize = 2048;
+
 
     this.scriptNode.onaudioprocess = () => {
       this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
@@ -42,6 +56,14 @@ export class AudioPlayer  {
     };
     this.firstLaunch = false;
   }
+
+  getFrequencyData() {
+    if (this.frequencyData !== undefined) {
+      this.analyser.getByteFrequencyData(this.frequencyData);
+    }
+    return this.frequencyData;
+  }
+
 
   playbackStopped(source) {
     if (this.source === source) {
@@ -54,6 +76,34 @@ export class AudioPlayer  {
     }
     else {
       console.log({current:this.source, source})
+    }
+  }
+
+  playAudioElementSource(url) {
+    this.audioObject.pause();
+    this.audioObject.src = url;
+
+    this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
+
+    //this.source.buffer = buffer;
+    this.playing=true;
+    let source = this.source;
+    //this.source.onended = () => this.playbackStopped(source);
+    //this.source.start();
+    this.destination = this.context.destination;
+    //this.source.connect(this.gainNode);
+    this.source.connect(this.analyser);
+    //this.gainNode.connect(this.destination);
+    //this.analyser.connect(this.destination);
+    this.analyser.connect(this.destination);
+    this.audioObject.load();
+    this.audioObject.play();
+
+    this.context.resume();
+
+    // hack for now
+    if (this.playerStateCallback !== undefined) {
+      this.playerStateCallback("playing");
     }
   }
 
@@ -75,18 +125,28 @@ export class AudioPlayer  {
 
   stop() {
     if (this.source !== undefined) {
-      this.source.stop();
-      this.source.disconnect(this.gainNode);
-      this.source = undefined;
+      if (this.audioObject === null) {
+        this.source.stop();
+      }
+      else {
+        this.audioObject.src = null;
+        this.audioObject.pause();
+      }
+      //this.source.disconnect(this.analyser);
+      if (this.audioObject === null) {
+        this.source = undefined;
+      }
+
       this.frequencyData = undefined;
     }
   }
 
-  playSong(url)  {
+  playSong(url,audioElementRef)  {
     if (this.firstLaunch) {
       this.init();
     }
-    if (url === this.currentSongURL) {
+    if (url === this.currentSongURL && this.paused) {
+      /*
       if (!this.paused) {
         if (this.playerStateCallback !== undefined) {
           this.playerStateCallback("playing");
@@ -94,8 +154,11 @@ export class AudioPlayer  {
         this.playSoundBuffer(this.decodedBuffer);
       }
       else {
+       */
         this.context.resume();
+      /*
       }
+       */
     }
     else {
       this.stop();
@@ -107,21 +170,26 @@ export class AudioPlayer  {
         this.activeRequest = undefined;
       }
 
-      this.activeRequest = new XMLHttpRequest();
-      this.activeRequest.open('GET', url, true);
-      this.activeRequest.responseType = 'arraybuffer';
-      this.activeRequest.onload = () => {
-        console.log("onload");
-        this.context.decodeAudioData(this.activeRequest.response, (buffer)  =>{
-          console.log(buffer);
-          if (this.playerStateCallback !== undefined) {
-            this.playerStateCallback("playing");
-          }
-          this.decodedBuffer = buffer;
-          this.playSoundBuffer(this.decodedBuffer);
-        });
-      };
-      this.activeRequest.send();
+      if (audioElementRef === null) {
+        this.activeRequest = new XMLHttpRequest();
+        this.activeRequest.open('GET', url, true);
+        this.activeRequest.responseType = 'arraybuffer';
+        this.activeRequest.onload = () => {
+          console.log("onload");
+          this.context.decodeAudioData(this.activeRequest.response, (buffer) => {
+            console.log(buffer);
+            if (this.playerStateCallback !== undefined) {
+              this.playerStateCallback("playing");
+            }
+            this.decodedBuffer = buffer;
+            this.playSoundBuffer(this.decodedBuffer);
+          });
+        };
+        this.activeRequest.send();
+      }
+      else {
+        this.playAudioElementSource(url);
+      }
     }
     this.paused = false;
   }
@@ -227,7 +295,7 @@ export class Scene {
     clear() {
       this.context.save();
       this.context.fillStyle = 'blue';
-      //this.context.clearRect(0, 0, this.width, this.height);
+      //this.context.fillRect(0, 0, this.width, this.height);
       this.context.clearRect(0, 0, this.width, this.height);
       this.context.restore();
     }
@@ -472,9 +540,12 @@ export class CircleViz {
 
   getFrequencyData() {
     if (this.scene !== undefined && this.scene.player !== undefined) {
-      return this.scene.player.frequencyData;
+      // return this.scene.player.frequencyData;
+      return this.scene.player.getFrequencyData();
     }
-    return undefined;
+    else {
+      return undefined;
+    }
   }
   getTicks(count, size, animationParams) {
 
