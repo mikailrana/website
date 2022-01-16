@@ -87,7 +87,7 @@ export class AudioPlayer  {
 
     //this.source.buffer = buffer;
     this.playing=true;
-    let source = this.source;
+    //let source = this.source;
     //this.source.onended = () => this.playbackStopped(source);
     //this.source.start();
     this.destination = this.context.destination;
