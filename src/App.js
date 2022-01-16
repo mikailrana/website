@@ -283,7 +283,7 @@ function App() {
   return (
     <ChakraProvider theme={customTheme}>
       <DarkMode>
-        <audio id={AudioPlayer.AudioPlayerId} crossOrigin={"anonymous"} />
+        <audio id={AudioPlayer.AudioPlayerId} crossOrigin={"anonymous"} controls/>
         <Box fontFamily={"Roboto"}>
           <Box padding={"24px"} _after={{boxSizing: "border-box"}}>
             <Box minHeight={"50vh"} maxHeight={"200px"}
