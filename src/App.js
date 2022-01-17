@@ -201,18 +201,19 @@ function App() {
 
   }
 
-  React.useEffect(() => {
-    new Scene(player,viz,canvasRef,canvasWidth);
-    player.playerStateCallback = (state,songURL) => {
-      if (state !== "stopped" || songURL === currentSelectedSongURL) {
-        setPlayerState(state);
-        if (state === "stopped") {
-          setSelectedSong(undefined);
-          setSelectedSongURL("");
-          currentSelectedSongURL = "";
-        }
+  player.playerStateCallback = (state,songURL) => {
+    if (state !== "stopped" || songURL === currentSelectedSongURL) {
+      setPlayerState(state);
+      if (state === "stopped") {
+        setSelectedSong(undefined);
+        setSelectedSongURL("");
+        currentSelectedSongURL = "";
       }
     }
+  }
+
+  React.useEffect(() => {
+    new Scene(player,viz,canvasRef,canvasWidth);
 
     /*
     if (audioElementRef.current !== null && audioContext === undefined) {
