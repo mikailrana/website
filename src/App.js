@@ -116,10 +116,11 @@ function App() {
 
   const [songs, setSongs] = React.useState(undefined);
   const [selectedSong, setSelectedSong] = React.useState(undefined);
+  const [selectedSongURL, setSelectedSongURL] = React.useState("");
   const [playerState,setPlayerState] = React.useState("paused");
   const canvasRef = React.useRef(null);
 
-  let playSong = (songObject,audioElementRef)=> {
+  let playSong = (songObject)=> {
     if (selectedSong === songObject){
       if (player.isPlaying()) {
         player.pauseSong();
@@ -130,7 +131,8 @@ function App() {
     }
     else{
       setSelectedSong(songObject);
-      player.playSong(songObject.audioURL,audioElementRef);
+      setSelectedSongURL(songObject.audioURL);
+      player.playSong(songObject.audioURL);
     }
 
   }
@@ -166,8 +168,6 @@ function App() {
   let carouselSections = [];
   if (songs !== undefined) {
     songs.forEach(song => {
-      let audioElementRef = React.createRef();
-
       let category = "unknown";
       let categories = song.category.split(",");
       if (categories.length) category = categories[0];
@@ -203,7 +203,7 @@ function App() {
             width={canvasWidthPx}
             height={canvasWidthPx}
             onClick={() => {
-              playSong(song,audioElementRef);
+              playSong(song);
             }}
 
           >
@@ -220,7 +220,6 @@ function App() {
           flex="0 0 25%"
           key={song.key}
         >
-          <audio src={song.audioURL} ref={audioElementRef} crossorigin={"anonymous"} preload={"metadata"} ></audio>
           {canvas}
 
           <Box display="flex"
@@ -239,7 +238,7 @@ function App() {
 
               }}
               onClick={() => {
-                playSong(song,audioElementRef);
+                playSong(song);
               }}
 
             >
@@ -283,7 +282,7 @@ function App() {
   return (
     <ChakraProvider theme={customTheme}>
       <DarkMode>
-        <audio id={AudioPlayer.AudioPlayerId} crossOrigin={"anonymous"} controls/>
+        <audio id={AudioPlayer.AudioPlayerId} crossOrigin={"anonymous"} src={selectedSongURL} autoPlay={true} ref={player.audioObjectRef}/>
         <Box fontFamily={"Roboto"}>
           <Box padding={"24px"} _after={{boxSizing: "border-box"}}>
             <Box minHeight={"50vh"} maxHeight={"200px"}
