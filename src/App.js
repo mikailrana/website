@@ -21,6 +21,30 @@ const config = {
 
 let firebase = require("firebase/firebase") ;
 
+// add a script to detect if we are on a mobile browser
+//https://stackoverflow.com/questions/58141018/mobile-device-detection
+let isMobileBrowser = () => {
+  let hasTouchScreen = false;
+  if ("maxTouchPoints" in navigator) {
+    hasTouchScreen = navigator.maxTouchPoints > 0;
+  } else if ("msMaxTouchPoints" in navigator) {
+    hasTouchScreen = navigator['msMaxTouchPoints'] > 0;
+  } else {
+    let mQ = window.matchMedia && matchMedia("(pointer:coarse)");
+    if (mQ && mQ.media === "(pointer:coarse)") {
+      hasTouchScreen = !!mQ.matches;
+    } else if ('orientation' in window) {
+      hasTouchScreen = true; // deprecated, but good fallback
+    }
+  }
+
+  //const md = new MobileDetect(window.navigator.userAgent);
+  //const isMobileDetected = Object.isNotNull(md.mobile()) || Object.isNotNull(md.phone()) || Object.isNotNull(md.tablet());
+
+  return hasTouchScreen;
+}
+
+
 const customTheme = extendTheme({
   config,
   styles: {
@@ -146,7 +170,8 @@ function Projects(props) {
 }
 
 let viz    = new CircleViz();
-let player = new AudioPlayer();
+let player = new AudioPlayer({enableAudioContext:!isMobileBrowser(), decodeAudioBroken:true});
+//let player = new AudioPlayer();
 
 function App() {
 
@@ -155,6 +180,8 @@ function App() {
   const [selectedSongURL, setSelectedSongURL] = React.useState("");
   const [playerState,setPlayerState] = React.useState("paused");
   const canvasRef = React.useRef(null);
+  // unfortunately React SetState is Async? So, we need to track selectedSong
+  let currentSelectedSongURL = undefined;
 
   let playSong = (songObject)=> {
     if (selectedSong === songObject){
@@ -168,6 +195,7 @@ function App() {
     else{
       setSelectedSong(songObject);
       setSelectedSongURL(songObject.audioURL);
+      currentSelectedSongURL = songObject.audioURL;
       player.playSong(songObject.audioURL);
     }
 
@@ -175,8 +203,15 @@ function App() {
 
   React.useEffect(() => {
     new Scene(player,viz,canvasRef,canvasWidth);
-    player.playerStateCallback = (state) => {
-      setPlayerState(state);
+    player.playerStateCallback = (state,songURL) => {
+      if (state !== "stopped" || songURL === currentSelectedSongURL) {
+        setPlayerState(state);
+        if (state === "stopped") {
+          setSelectedSong(undefined);
+          setSelectedSongURL("");
+          currentSelectedSongURL = "";
+        }
+      }
     }
 
     /*
@@ -225,11 +260,11 @@ function App() {
       */
       let canvas = undefined;
       let Canvas = chakra('canvas');
-      if (selectedSong !== undefined && playerState === "playing" && song.key === selectedSong.key) {
+      if (selectedSong !== undefined && (playerState === "playing" || playerState === "loading") && song.key === selectedSong.key) {
         icon = FaRegPauseCircle
         canvas = (
           <Canvas
-            opacity={".5"}
+            opacity={".7"}
             pos="absolute"
             zIndex={1000}
             id='Player-canvas'
@@ -314,10 +349,12 @@ function App() {
     }
   console.log(carouselSections);
   }
+  let audioElement = player.renderAudioElement();
+  // <audio id={AudioPlayer.AudioPlayerId} crossOrigin={"anonymous"} src={selectedSongURL} autoPlay={true} ref={player.audioObjectRef}/>
   return (
     <ChakraProvider theme={customTheme}>
       <DarkMode>
-        <audio id={AudioPlayer.AudioPlayerId} crossOrigin={"anonymous"} src={selectedSongURL} autoPlay={true} ref={player.audioObjectRef}/>
+        {audioElement}
         <Box fontFamily={"Roboto"}>
           <Box padding={"24px"} _after={{boxSizing: "border-box"}}>
             <Box minHeight={"50vh"} maxHeight={"200px"}

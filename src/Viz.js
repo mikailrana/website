@@ -7,8 +7,8 @@ export class AudioPlayer  {
   constructor(props) {
     this.props = (props !== undefined) ? props : {};
     this.enableAudioContext = (this.props.enableAudioContext !== undefined && this.props.enableAudioContext)
+    this.decodeAudioBroken = (this.props.decodeAudioBroken !== undefined && this.props.decodeAudioBroken)
     this.audioObjectRef = React.createRef();
-    this.audioObject=null;
     this.context=undefined;
     this.scriptNode=undefined;
     this.analyser=undefined;
@@ -18,6 +18,7 @@ export class AudioPlayer  {
     this.firstLaunch=true;
     this.decodedBuffer=undefined;
     this.currentSongURL=undefined;
+    this.loading=false;
     this.paused=false;
     this.playing=false;
     this.activeRequest=undefined;
@@ -27,10 +28,47 @@ export class AudioPlayer  {
 
   init() {
 
+    if (!this.enableAudioContext || this.decodeAudioBroken) {
+      this.initAudioObject();
+    }
+    if (this.enableAudioContext) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      // create audio context ... has to be via onclick event
+      this.context = new AudioContext({ latencyHint: "playback" });
+      this.context.resume();
+      //create analyser node
+      this.analyser = this.context.createAnalyser();
+      this.gainNode = this.context.createGain();
+
+
+      // create buffer source object
+      if (this.decodeAudioBroken) {
+        if (this.audioObject !== null) {
+          this.source = this.context.createMediaElementSource(this.audioObjectRef.current);
+          //create analyser node
+          this.analyser = this.context.createAnalyser();
+          // connect source to analyzer
+          this.source.connect(this.analyser);
+          this.source.connect(this.gainNode);
+          this.gainNode.connect(this.analyser);
+          // connect analyser to output
+          this.gainNode.connect(this.context.destination);
+        }
+      }
+    }
+    this.firstLaunch = false;
+  }
+
+  initAudioObject() {
     let audio = this.audioObjectRef.current;
     // When enough of the file has downloaded to start playing
     audio.addEventListener('canplay', (e) => {
       console.log('canplay');
+      this.loading = false;
+      this.playing = true;
+      if (this.playerStateCallback !== undefined) {
+        this.playerStateCallback("playing",this.currentSongURL);
+      }
       this.props.onCanPlay && this.props.onCanPlay(e)
     })
     // When enough of the file has downloaded to play the entire file
@@ -87,6 +125,10 @@ export class AudioPlayer  {
 
     //  when loading of the media begins
     audio.addEventListener('loadstart', (e) => {
+      if (this.playerStateCallback !== undefined) {
+        this.playerStateCallback("loading",this.currentSongURL);
+      }
+
       this.props.onLoadStart && this.props.onLoadStart(e)
     })
 
@@ -115,53 +157,6 @@ export class AudioPlayer  {
     audio.addEventListener('volumechange', (e) => {
       this.props.onVolumeChange && this.props.onVolumeChange(e)
     })
-
-    this.audioObject=document.getElementById(AudioPlayer.AudioPlayerId);
-    if (this.enableAudioContext) {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      // create audio context ... has to be via onclick event
-      this.context = new AudioContext({ latencyHint: "playback" });
-      this.context.resume();
-      //create analyser node
-      this.analyser = this.context.createAnalyser();
-
-      // create buffer source object
-      if (this.audioObject !== null) {
-        this.source = this.context.createMediaElementSource(this.audioObject);
-        //create analyser node
-        this.analyser = this.context.createAnalyser();
-        // connect source to analyzer
-        this.source.connect(this.analyser);
-        // connect analyser to output
-        this.analyser.connect(this.context.destination);
-      }
-    }
-
-    /*
-    if (this.context.suspend)
-      this.context.suspend();
-
-    this.gainNode = this.context.createGain();
-    // create script node to process buffer chunks for fft processing
-    this.scriptNode = this.context.createScriptProcessor(2048, 1, 1);
-    this.scriptNode.connect(this.context.destination);
-    //create analyser node
-    this.analyser = this.context.createAnalyser();
-    // connect analyser to script node
-    //this.analyser.connect(this.scriptNode);
-    // todo: what does this do ?
-    this.analyser.smoothingTimeConstant = 0.6;
-    // define fft size
-    this.analyser.fftSize = 2048;
-
-
-    this.scriptNode.onaudioprocess = () => {
-      this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
-      this.analyser.getByteFrequencyData(this.frequencyData);
-    };
-
-     */
-    this.firstLaunch = false;
   }
 
   handlePlay = (e) => {
@@ -200,7 +195,7 @@ export class AudioPlayer  {
       // reset visualization
       this.playing = false;
       if (this.playerStateCallback !== undefined) {
-        this.playerStateCallback("stopped")
+        this.playerStateCallback("stopped",this.currentSongURL)
       }
     }
     else {
@@ -208,42 +203,40 @@ export class AudioPlayer  {
     }
   }
 
-  playAudioElementSource(url) {
+  renderAudioElement() {
+    if (!this.enableAudioContext || this.decodeAudioBroken) {
+      return (
+        <audio
+          src={this.currentSongURL}
+          controls={false}
+          loop={false}
+          autoPlay={true}
+          crossOrigin={"anonymous"}
+          ref={this.audioObjectRef}
+          preload={"auto"}
+        > </audio>
+      )
+    }
+    return null;
+  }
 
-    this.audioObject.pause();
-    this.audioObject.currentTime = 0.0;
+  playAudioElementSource(url) {
+    this.audioObjectRef.current  && this.audioObjectRef.current.pause();
 
     // this.audioObject.src = url;
-    if (this.enableAudioContext) {
-      this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
-    }
 
     //this.source.buffer = buffer;
-    this.playing=true;
+    this.loading = true;
 
-    /*
-    //let source = this.source;
-    //this.source.onended = () => this.playbackStopped(source);
-    //this.source.start();
-    this.destination = this.context.destination;
-    //this.source.connect(this.gainNode);
-    this.source.connect(this.analyser);
-    //this.gainNode.connect(this.destination);
-    //this.analyser.connect(this.destination);
-    this.analyser.connect(this.destination);
-
-     */
-    //this.audioObject.load();
-    //this.audioObject.play();
-
+    // enable freqdata buffer
+    if (this.enableAudioContext && this.decodeAudioBroken){
+      this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
+    }
     if (this.enableAudioContext) {
       this.context.resume();
     }
 
     // hack for now
-    if (this.playerStateCallback !== undefined) {
-      this.playerStateCallback("playing");
-    }
   }
 
   throttle(func, limit) {
@@ -259,10 +252,15 @@ export class AudioPlayer  {
 
   playSoundBuffer(buffer) {
     if (this.enableAudioContext) {
+      this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
       // create buffer source object
       this.source = this.context.createBufferSource();
       this.source.buffer = buffer;
+      this.loading = false;
       this.playing = true;
+      if (this.playerStateCallback !== undefined) {
+        this.playerStateCallback("playing",this.currentSongURL);
+      }
       let source = this.source;
       this.source.onended = () => this.playbackStopped(source);
       this.source.start();
@@ -272,24 +270,33 @@ export class AudioPlayer  {
       this.gainNode.connect(this.destination);
       this.context.resume();
     }
-
   }
 
   stop() {
-    if (this.source !== undefined) {
-      if (this.enableAudioContext) {
+    if (this.enableAudioContext && !this.decodeAudioBroken) {
+      if (this.source !== undefined) {
         this.source.stop();
-        //this.source = undefined;
-        //this.source.disconnect(this.analyser);
-        this.frequencyData = undefined;
-
+        this.source.disconnect(this.gainNode);
+        this.source = undefined;
       }
-      else {
-        if (this.audioObjectRef.current !== null) {
-          this.audioObjectRef.current.pause();
-        }
+      this.context.suspend();
+      if (this.activeRequest !== undefined) {
+        this.activeRequest.abort();
+        this.activeRequest = undefined;
+      }
+      this.playing = false;
+      this.loading = false;
+      if (this.playerStateCallback !== undefined) {
+        this.playerStateCallback("stopped",this.currentSongURL)
       }
     }
+    else {
+      if (this.audioObjectRef.current !== null) {
+        this.audioObjectRef.current.pause();
+      }
+    }
+    this.currentSongURL = undefined;
+    this.frequencyData = undefined;
   }
 
   playSong(url,audioElementRef)  {
@@ -297,31 +304,30 @@ export class AudioPlayer  {
       this.init();
     }
     this.stop();
-    if (this.enableAudioContext) {
-      this.context.suspend();
-    }
+
     this.currentSongURL = url;
 
-    if (this.activeRequest !== undefined) {
-      this.activeRequest.abort();
-      this.activeRequest = undefined;
-    }
-
-    if (this.enableAudioContext) {
+    if (this.enableAudioContext && !this.decodeAudioBroken) {
+      this.loading = true;
+      if (this.playerStateCallback !== undefined) {
+        this.playerStateCallback("loading",this.currentSongURL);
+      }
       this.activeRequest = new XMLHttpRequest();
       this.activeRequest.open('GET', url, true);
       this.activeRequest.responseType = 'arraybuffer';
       this.activeRequest.onload = () => {
         console.log("onload");
         this.context.decodeAudioData(this.activeRequest.response, (buffer) => {
-          console.log(buffer);
-          if (this.playerStateCallback !== undefined) {
-            this.playerStateCallback("playing");
-          }
           this.decodedBuffer = buffer;
           this.playSoundBuffer(this.decodedBuffer);
         });
       };
+      let request = this.activeRequest;
+      this.activeRequest.onerror = () => {
+        // If failed
+        console.log(request);
+        this.stop();
+      }
       this.activeRequest.send();
     }
     else {
@@ -333,14 +339,14 @@ export class AudioPlayer  {
   pauseSong() {
     if (this.playing) {
       this.paused = true;
-      if (this.audioObjectRef.current !== null) {
+      if (this.audioObjectRef.current !== null ) {
         this.audioObjectRef.current.pause();
       }
-      if (this.enableAudioContext){
+      if (this.enableAudioContext && !this.decodeAudioBroken){
         this.context.suspend();
       }
       if (this.playerStateCallback !== undefined) {
-        this.playerStateCallback("paused");
+        this.playerStateCallback("paused",this.currentSongURL);
       }
     }
   }
@@ -355,7 +361,7 @@ export class AudioPlayer  {
         this.context.resume();
       }
       if (this.playerStateCallback !== undefined) {
-        this.playerStateCallback("playing");
+        this.playerStateCallback("playing",this.currentSongURL);
       }
     }
   }
@@ -379,8 +385,7 @@ export class Scene {
       this.optimiseHeight = 800;
       this._inProcess =  false;
       this.scaleCoef = 0.5; //Math.max(0.5, 740 / this.optimiseHeight);
-
-
+      this.loadingProgress = 0.0;
 
       this.initHandlers();
       this.visualization = visualization;
@@ -411,7 +416,7 @@ export class Scene {
       this.height = size;
 
       //this.radius = (size - this.padding * 2) / 4;
-      this.radius = 38;
+      this.radius = 33;
       //this.cx = this.radius + this.padding;
       //this.cy = this.radius + this.padding;
       this.cx = size/2;
@@ -446,8 +451,68 @@ export class Scene {
       this.context.restore();
     }
 
+    static accelerateInterpolator(x) {
+      return x * x;
+    }
+
+    static  decelerateInterpolator(x) {
+      return 1 - ((1 - x) * (1 - x));
+    }
+
+
+    drawCircle(circle, progress) {
+      let ctx = this.context;
+      ctx.beginPath();
+      var start = Scene.accelerateInterpolator(progress) * circle.speed;
+      var end = Scene.decelerateInterpolator(progress) * circle.speed;
+      ctx.arc(circle.center.x, circle.center.y, circle.radius, (start - 0.5) * Math.PI, (end - 0.5) * Math.PI);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "white";
+      //ctx.fill();
+      ctx.stroke();
+    }
+
+    drawLoadingVisualization() {
+
+      let bigCircle = {
+        center: {
+          x: this.width/2,
+          y: this.width/2
+        },
+        radius: 50,
+        speed: 4
+      }
+
+      let smallCirlce = {
+        center: {
+          x: this.width/2,
+          y: this.width/2
+        },
+        radius: 30,
+        speed: 2
+      }
+
+      this.drawCircle(bigCircle, this.loadingProgress);
+      this.drawCircle(smallCirlce, this.loadingProgress);
+      this.loadingProgress += 0.02;
+      if (this.loadingProgress > 1) {
+        this.loadingProgress = 0.0;
+      }
+    }
+
     draw() {
-      this.visualization.draw(this.context);
+
+      if (this.player.loading) {
+        this.drawLoadingVisualization();
+      }
+      else if (this.player.playing) {
+        this.loadingProgress = 0.0;
+        this.visualization.draw(this.context);
+      }
+      else {
+
+      }
+
       //Tracker.draw();
       //Controls.draw();
     }
@@ -697,7 +762,7 @@ export class CircleViz {
 
     let ticks = this.getTickPoints(count);
     let x1, y1, x2, y2, m = [], tick, k;
-    let lesser = 160;
+    let lesser = 190;
     let allScales = [];
     let frequencyData = this.getFrequencyData();
 
