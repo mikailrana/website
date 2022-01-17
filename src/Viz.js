@@ -117,22 +117,24 @@ export class AudioPlayer  {
     })
 
     this.audioObject=document.getElementById(AudioPlayer.AudioPlayerId);
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    // create audio context ... has to be via onclick event
-    this.context = new AudioContext({latencyHint:"playback"});
-    this.context.resume();
-    //create analyser node
-    this.analyser = this.context.createAnalyser();
-
-    // create buffer source object
-    if (this.audioObject !== null && this.enableAudioContext) {
-      this.source = this.context.createMediaElementSource(this.audioObject);
+    if (this.enableAudioContext) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      // create audio context ... has to be via onclick event
+      this.context = new AudioContext({ latencyHint: "playback" });
+      this.context.resume();
       //create analyser node
       this.analyser = this.context.createAnalyser();
-      // connect source to analyzer
-      this.source.connect(this.analyser);
-      // connect analyser to output
-      this.analyser.connect(this.context.destination);
+
+      // create buffer source object
+      if (this.audioObject !== null) {
+        this.source = this.context.createMediaElementSource(this.audioObject);
+        //create analyser node
+        this.analyser = this.context.createAnalyser();
+        // connect source to analyzer
+        this.source.connect(this.analyser);
+        // connect analyser to output
+        this.analyser.connect(this.context.destination);
+      }
     }
 
     /*
@@ -185,7 +187,7 @@ export class AudioPlayer  {
   }
 
   getFrequencyData() {
-    if (this.frequencyData !== undefined) {
+    if (this.enableAudioContext && this.frequencyData !== undefined) {
       this.analyser.getByteFrequencyData(this.frequencyData);
     }
     return this.frequencyData;
@@ -212,8 +214,9 @@ export class AudioPlayer  {
     this.audioObject.currentTime = 0.0;
 
     // this.audioObject.src = url;
-
-    this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
+    if (this.enableAudioContext) {
+      this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
+    }
 
     //this.source.buffer = buffer;
     this.playing=true;
@@ -233,7 +236,9 @@ export class AudioPlayer  {
     //this.audioObject.load();
     //this.audioObject.play();
 
-    this.context.resume();
+    if (this.enableAudioContext) {
+      this.context.resume();
+    }
 
     // hack for now
     if (this.playerStateCallback !== undefined) {
@@ -253,18 +258,20 @@ export class AudioPlayer  {
   }
 
   playSoundBuffer(buffer) {
-    // create buffer source object
-    this.source = this.context.createBufferSource();
-    this.source.buffer = buffer;
-    this.playing=true;
-    let source = this.source;
-    this.source.onended = () => this.playbackStopped(source);
-    this.source.start();
-    this.destination = this.context.destination;
-    this.source.connect(this.gainNode);
-    this.gainNode.connect(this.analyser);
-    this.gainNode.connect(this.destination);
-    this.context.resume();
+    if (this.enableAudioContext) {
+      // create buffer source object
+      this.source = this.context.createBufferSource();
+      this.source.buffer = buffer;
+      this.playing = true;
+      let source = this.source;
+      this.source.onended = () => this.playbackStopped(source);
+      this.source.start();
+      this.destination = this.context.destination;
+      this.source.connect(this.gainNode);
+      this.gainNode.connect(this.analyser);
+      this.gainNode.connect(this.destination);
+      this.context.resume();
+    }
 
   }
 
@@ -290,7 +297,9 @@ export class AudioPlayer  {
       this.init();
     }
     this.stop();
-    this.context.suspend();
+    if (this.enableAudioContext) {
+      this.context.suspend();
+    }
     this.currentSongURL = url;
 
     if (this.activeRequest !== undefined) {
@@ -298,7 +307,7 @@ export class AudioPlayer  {
       this.activeRequest = undefined;
     }
 
-    if (audioElementRef === null) {
+    if (this.enableAudioContext) {
       this.activeRequest = new XMLHttpRequest();
       this.activeRequest.open('GET', url, true);
       this.activeRequest.responseType = 'arraybuffer';
@@ -342,7 +351,9 @@ export class AudioPlayer  {
       if (this.audioObjectRef.current !== null) {
         this.audioObjectRef.current.play();
       }
-      this.context.resume();
+      if (this.enableAudioContext) {
+        this.context.resume();
+      }
       if (this.playerStateCallback !== undefined) {
         this.playerStateCallback("playing");
       }
