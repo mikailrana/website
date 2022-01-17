@@ -6,6 +6,7 @@ export class AudioPlayer  {
 
   constructor(props) {
     this.props = (props !== undefined) ? props : {};
+    this.enableAudioContext = (this.props.enableAudioContext !== undefined && this.props.enableAudioContext)
     this.audioObjectRef = React.createRef();
     this.audioObject=null;
     this.context=undefined;
@@ -103,11 +104,12 @@ export class AudioPlayer  {
     // When the user pauses playback
     audio.addEventListener('pause', this.handlePause)
 
+    let listenerInterval = (this.props.listenInterval !== undefined)?this.props.listenInterval:1000;
     audio.addEventListener(
       'timeupdate',
       this.throttle((e) => {
         this.props.onListen && this.props.onListen(e)
-      }, this.props.listenInterval)
+      }, listenerInterval )
     )
 
     audio.addEventListener('volumechange', (e) => {
@@ -123,7 +125,7 @@ export class AudioPlayer  {
     this.analyser = this.context.createAnalyser();
 
     // create buffer source object
-    if (this.audioObject !== null) {
+    if (this.audioObject !== null && this.enableAudioContext) {
       this.source = this.context.createMediaElementSource(this.audioObject);
       //create analyser node
       this.analyser = this.context.createAnalyser();
@@ -177,6 +179,7 @@ export class AudioPlayer  {
     console.log('handleEnded');
     if (!this.audioObjectRef.current) return
     // Remove forceUpdate when stop supporting IE 11
+    this.playbackStopped(undefined);
     this.props.forceUpdate && this.props.forceUpdate();
     this.props.onEnded && this.props.onEnded(e)
   }
@@ -190,7 +193,7 @@ export class AudioPlayer  {
 
 
   playbackStopped(source) {
-    if (this.source === source) {
+    if (source === undefined || this.source === source) {
       console.log("playbackStopped:" + source);
       // reset visualization
       this.playing = false;
@@ -205,7 +208,9 @@ export class AudioPlayer  {
 
   playAudioElementSource(url) {
 
-    //this.audioObject.pause();
+    this.audioObject.pause();
+    this.audioObject.currentTime = 0.0;
+
     // this.audioObject.src = url;
 
     this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
@@ -265,19 +270,18 @@ export class AudioPlayer  {
 
   stop() {
     if (this.source !== undefined) {
-      if (this.audioObject === null) {
+      if (this.enableAudioContext) {
         this.source.stop();
+        //this.source = undefined;
+        //this.source.disconnect(this.analyser);
+        this.frequencyData = undefined;
+
       }
       else {
-        this.audioObject.src = null;
-        this.audioObject.pause();
+        if (this.audioObjectRef.current !== null) {
+          this.audioObjectRef.current.pause();
+        }
       }
-      //this.source.disconnect(this.analyser);
-      if (this.audioObject === null) {
-        this.source = undefined;
-      }
-
-      this.frequencyData = undefined;
     }
   }
 
@@ -285,51 +289,34 @@ export class AudioPlayer  {
     if (this.firstLaunch) {
       this.init();
     }
-    if (url === this.currentSongURL && this.paused) {
-      /*
-      if (!this.paused) {
-        if (this.playerStateCallback !== undefined) {
-          this.playerStateCallback("playing");
-        }
-        this.playSoundBuffer(this.decodedBuffer);
-      }
-      else {
-       */
-        this.context.resume();
-      /*
-      }
-       */
+    this.stop();
+    this.context.suspend();
+    this.currentSongURL = url;
+
+    if (this.activeRequest !== undefined) {
+      this.activeRequest.abort();
+      this.activeRequest = undefined;
+    }
+
+    if (audioElementRef === null) {
+      this.activeRequest = new XMLHttpRequest();
+      this.activeRequest.open('GET', url, true);
+      this.activeRequest.responseType = 'arraybuffer';
+      this.activeRequest.onload = () => {
+        console.log("onload");
+        this.context.decodeAudioData(this.activeRequest.response, (buffer) => {
+          console.log(buffer);
+          if (this.playerStateCallback !== undefined) {
+            this.playerStateCallback("playing");
+          }
+          this.decodedBuffer = buffer;
+          this.playSoundBuffer(this.decodedBuffer);
+        });
+      };
+      this.activeRequest.send();
     }
     else {
-      this.stop();
-      this.context.suspend();
-      this.currentSongURL = url;
-
-      if (this.activeRequest !== undefined) {
-        this.activeRequest.abort();
-        this.activeRequest = undefined;
-      }
-
-      if (audioElementRef === null) {
-        this.activeRequest = new XMLHttpRequest();
-        this.activeRequest.open('GET', url, true);
-        this.activeRequest.responseType = 'arraybuffer';
-        this.activeRequest.onload = () => {
-          console.log("onload");
-          this.context.decodeAudioData(this.activeRequest.response, (buffer) => {
-            console.log(buffer);
-            if (this.playerStateCallback !== undefined) {
-              this.playerStateCallback("playing");
-            }
-            this.decodedBuffer = buffer;
-            this.playSoundBuffer(this.decodedBuffer);
-          });
-        };
-        this.activeRequest.send();
-      }
-      else {
-        this.playAudioElementSource(url);
-      }
+      this.playAudioElementSource(url);
     }
     this.paused = false;
   }
@@ -340,7 +327,9 @@ export class AudioPlayer  {
       if (this.audioObjectRef.current !== null) {
         this.audioObjectRef.current.pause();
       }
-      this.context.suspend();
+      if (this.enableAudioContext){
+        this.context.suspend();
+      }
       if (this.playerStateCallback !== undefined) {
         this.playerStateCallback("paused");
       }

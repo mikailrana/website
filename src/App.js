@@ -109,6 +109,42 @@ function MusicCarousel(props) {
   )
 }
 
+function Projects(props) {
+  if (props.enabled) {
+    return (
+      <Box>
+        <SectionHeader title={"Projects"}/>
+          <SectionCategory title={"Made in JS and Python"}/>
+          <SimpleGrid columns={[1, 2]}>
+            <SimpleGrid columns={[1, 2, 3, 4]} width={["100%", "480px", "720px", "920px"]} columnGap={"15px"}
+                        maxWidth={iconWidth * 4}>
+              <SectionButton text={"Text Description"}
+                             imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
+                             linkURL={"https://chakra-ui.com/"}/>
+              <SectionButton text={"Text Description"}
+                             imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
+                             linkURL={"https://chakra-ui.com/"}/>
+              <SectionButton text={"Text Description"}
+                             imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
+                             linkURL={"https://chakra-ui.com/"}/>
+              <SectionButton text={"Text Description"}
+                             imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
+                             linkURL={"https://chakra-ui.com/"}/>
+
+              <SectionButton text={"Text Description"}
+                             imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
+                             linkURL={"https://chakra-ui.com/"}/>
+            </SimpleGrid>
+            <Box width={["0px", "1px"]}/>
+          </SimpleGrid>
+      </Box>
+    )
+  }
+  else {
+    return null;
+  }
+}
+
 let viz    = new CircleViz();
 let player = new AudioPlayer();
 
@@ -189,7 +225,6 @@ function App() {
       */
       let canvas = undefined;
       let Canvas = chakra('canvas');
-      console.log({ playerState });
       if (selectedSong !== undefined && playerState === "playing" && song.key === selectedSong.key) {
         icon = FaRegPauseCircle
         canvas = (
@@ -322,13 +357,13 @@ function App() {
                       fontSize="2.5rem"
                       lineHeight="shorter"
                     >
-                      Freddie's Music
+                      Mikail's Music & Projects
                     </Box>
                     <Box
                       marginTop="20px"
                       fontSize="xl"
                     >
-                      Prod. Freddie
+                      Prod. Mikail
                     </Box>
                   </Box>
                 </Box>
@@ -337,29 +372,8 @@ function App() {
 
             <SectionHeader title={"Featured Music"}/>
               {carouselSections}
-            <SectionHeader title={"Projects"}/>
-            <SectionCategory title={"Made in JS and Python"} />
-            <SimpleGrid columns={[1,2]} >
-              <SimpleGrid columns={[1,2,3,4]} width={["100%","480px","720px","920px"]} columnGap={"15px"} maxWidth={iconWidth * 4} >
-                <SectionButton text={"Text Description"}
-                               imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
-                               linkURL={"https://chakra-ui.com/"} />
-                <SectionButton text={"Text Description"}
-                               imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
-                               linkURL={"https://chakra-ui.com/"} />
-                <SectionButton text={"Text Description"}
-                               imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
-                               linkURL={"https://chakra-ui.com/"} />
-                <SectionButton text={"Text Description"}
-                               imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
-                               linkURL={"https://chakra-ui.com/"} />
+            <Projects enabled={false}/>
 
-              <SectionButton text={"Text Description"}
-                             imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
-                             linkURL={"https://chakra-ui.com/"} />
-              </SimpleGrid>
-              <Box width={["0px","1px"]} />
-            </SimpleGrid>
             <Box paddingTop={"40px"}/>
           </Box>
         </Box>
