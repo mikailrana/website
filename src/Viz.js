@@ -24,6 +24,8 @@ export class AudioPlayer  {
     this.activeRequest=undefined;
     this.playerStateCallback = undefined;
     this.frequencyData = undefined;
+    this.scene = undefined;
+    this.audioPlaysCounter = 0;
   }
 
   init() {
@@ -159,6 +161,10 @@ export class AudioPlayer  {
     })
   }
 
+  setScene(scene) {
+    this.scene = scene;
+  }
+
   handlePlay = (e) => {
     console.log('handlePlay');
     this.props.forceUpdate && this.props.forceUpdate();
@@ -175,6 +181,7 @@ export class AudioPlayer  {
   handleEnded = (e) => {
     console.log('handleEnded');
     if (!this.audioObjectRef.current) return
+    this.audioObjectRef.current.src = "";
     // Remove forceUpdate when stop supporting IE 11
     this.playbackStopped(undefined);
     this.props.forceUpdate && this.props.forceUpdate();
@@ -193,10 +200,12 @@ export class AudioPlayer  {
     if (source === undefined || this.source === source) {
       console.log("playbackStopped:" + source);
       // reset visualization
+      this.loading = false;
       this.playing = false;
       if (this.playerStateCallback !== undefined) {
         this.playerStateCallback("stopped",this.currentSongURL)
       }
+      this.currentSongURL = undefined;
     }
     else {
       console.log({current:this.source, source})
@@ -207,6 +216,7 @@ export class AudioPlayer  {
     if (!this.enableAudioContext || this.decodeAudioBroken) {
       return (
         <audio
+          id = {this.audioPlaysCounter}
           src={this.currentSongURL}
           controls={false}
           loop={false}
@@ -221,6 +231,7 @@ export class AudioPlayer  {
   }
 
   playAudioElementSource(url) {
+    this.audioPlaysCounter++;
     this.audioObjectRef.current  && this.audioObjectRef.current.pause();
 
     // this.audioObject.src = url;
@@ -393,6 +404,7 @@ export class Scene {
       this.visualization.init(this);
       //Tracker.init(this);
       //Controls.init(this);
+      player.setScene(this);
 
       this.startRender();
     }
@@ -431,16 +443,23 @@ export class Scene {
     }
 
     render() {
-      requestAnimationFrame(() => {
-        if (this.canvasRef.current !== null) {
-          this.canvasConfigure();
-          this.clear();
-          this.draw();
-        }
-        if (this._inProcess) {
+      if (this.player.currentSongURL === undefined || this.player.paused) {
+        setTimeout(() => {
           this.render();
-        }
-      });
+        },1000);
+      }
+      else {
+        requestAnimationFrame(() => {
+          if (this.canvasRef.current !== null) {
+            this.canvasConfigure();
+            this.clear();
+            this.draw();
+          }
+          if (this._inProcess) {
+            this.render();
+          }
+        });
+      }
     }
 
     clear() {
