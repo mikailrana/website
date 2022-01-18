@@ -21,6 +21,30 @@ const config = {
 
 let firebase = require("firebase/firebase") ;
 
+// add a script to detect if we are on a mobile browser
+//https://stackoverflow.com/questions/58141018/mobile-device-detection
+let isMobileBrowser = () => {
+  let hasTouchScreen = false;
+  if ("maxTouchPoints" in navigator) {
+    hasTouchScreen = navigator.maxTouchPoints > 0;
+  } else if ("msMaxTouchPoints" in navigator) {
+    hasTouchScreen = navigator['msMaxTouchPoints'] > 0;
+  } else {
+    let mQ = window.matchMedia && matchMedia("(pointer:coarse)");
+    if (mQ && mQ.media === "(pointer:coarse)") {
+      hasTouchScreen = !!mQ.matches;
+    } else if ('orientation' in window) {
+      hasTouchScreen = true; // deprecated, but good fallback
+    }
+  }
+
+  //const md = new MobileDetect(window.navigator.userAgent);
+  //const isMobileDetected = Object.isNotNull(md.mobile()) || Object.isNotNull(md.phone()) || Object.isNotNull(md.tablet());
+
+  return hasTouchScreen;
+}
+
+
 const customTheme = extendTheme({
   config,
   styles: {
@@ -109,15 +133,55 @@ function MusicCarousel(props) {
   )
 }
 
+function Projects(props) {
+  if (props.enabled) {
+    return (
+      <Box>
+        <SectionHeader title={"Projects"}/>
+          <SectionCategory title={"Made in JS and Python"}/>
+          <SimpleGrid columns={[1, 2]}>
+            <SimpleGrid columns={[1, 2, 3, 4]} width={["100%", "480px", "720px", "920px"]} columnGap={"15px"}
+                        maxWidth={iconWidth * 4}>
+              <SectionButton text={"Text Description"}
+                             imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
+                             linkURL={"https://chakra-ui.com/"}/>
+              <SectionButton text={"Text Description"}
+                             imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
+                             linkURL={"https://chakra-ui.com/"}/>
+              <SectionButton text={"Text Description"}
+                             imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
+                             linkURL={"https://chakra-ui.com/"}/>
+              <SectionButton text={"Text Description"}
+                             imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
+                             linkURL={"https://chakra-ui.com/"}/>
+
+              <SectionButton text={"Text Description"}
+                             imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
+                             linkURL={"https://chakra-ui.com/"}/>
+            </SimpleGrid>
+            <Box width={["0px", "1px"]}/>
+          </SimpleGrid>
+      </Box>
+    )
+  }
+  else {
+    return null;
+  }
+}
+
 let viz    = new CircleViz();
-let player = new AudioPlayer();
+let player = new AudioPlayer({enableAudioContext:!isMobileBrowser(), decodeAudioBroken:true});
+//let player = new AudioPlayer();
 
 function App() {
 
   const [songs, setSongs] = React.useState(undefined);
   const [selectedSong, setSelectedSong] = React.useState(undefined);
+  const [selectedSongURL, setSelectedSongURL] = React.useState("");
   const [playerState,setPlayerState] = React.useState("paused");
   const canvasRef = React.useRef(null);
+  // unfortunately React SetState is Async? So, we need to track selectedSong
+  let currentSelectedSongURL = undefined;
 
   let playSong = (songObject)=> {
     if (selectedSong === songObject){
@@ -130,16 +194,26 @@ function App() {
     }
     else{
       setSelectedSong(songObject);
-      player.playSong(songObject.audioURL,viz);
+      setSelectedSongURL(songObject.audioURL);
+      currentSelectedSongURL = songObject.audioURL;
+      player.playSong(songObject.audioURL);
     }
 
   }
 
+  player.playerStateCallback = (state,songURL) => {
+    if (state !== "stopped" || songURL === currentSelectedSongURL) {
+      setPlayerState(state);
+      if (state === "stopped") {
+        setSelectedSong(undefined);
+        setSelectedSongURL("");
+        currentSelectedSongURL = "";
+      }
+    }
+  }
+
   React.useEffect(() => {
     new Scene(player,viz,canvasRef,canvasWidth);
-    player.playerStateCallback = (state) => {
-      setPlayerState(state);
-    }
 
     /*
     if (audioElementRef.current !== null && audioContext === undefined) {
@@ -166,7 +240,6 @@ function App() {
   let carouselSections = [];
   if (songs !== undefined) {
     songs.forEach(song => {
-
       let category = "unknown";
       let categories = song.category.split(",");
       if (categories.length) category = categories[0];
@@ -188,12 +261,11 @@ function App() {
       */
       let canvas = undefined;
       let Canvas = chakra('canvas');
-      console.log({ playerState });
-      if (selectedSong !== undefined && playerState === "playing" && song.key === selectedSong.key) {
+      if (selectedSong !== undefined && (playerState === "playing" || playerState === "loading") && song.key === selectedSong.key) {
         icon = FaRegPauseCircle
         canvas = (
           <Canvas
-            opacity={".5"}
+            opacity={".7"}
             pos="absolute"
             zIndex={1000}
             id='Player-canvas'
@@ -278,9 +350,12 @@ function App() {
     }
   console.log(carouselSections);
   }
+  let audioElement = player.renderAudioElement();
+  // <audio id={AudioPlayer.AudioPlayerId} crossOrigin={"anonymous"} src={selectedSongURL} autoPlay={true} ref={player.audioObjectRef}/>
   return (
     <ChakraProvider theme={customTheme}>
       <DarkMode>
+        {audioElement}
         <Box fontFamily={"Roboto"}>
           <Box padding={"24px"} _after={{boxSizing: "border-box"}}>
             <Box minHeight={"50vh"} maxHeight={"200px"}
@@ -320,13 +395,13 @@ function App() {
                       fontSize="2.5rem"
                       lineHeight="shorter"
                     >
-                      Freddie's Music
+                      Mikail's Music & Projects
                     </Box>
                     <Box
                       marginTop="20px"
                       fontSize="xl"
                     >
-                      Prod. Freddie
+                      Prod. Mikail
                     </Box>
                   </Box>
                 </Box>
@@ -335,29 +410,8 @@ function App() {
 
             <SectionHeader title={"Featured Music"}/>
               {carouselSections}
-            <SectionHeader title={"Projects"}/>
-            <SectionCategory title={"Made in JS and Python"} />
-            <SimpleGrid columns={[1,2]} >
-              <SimpleGrid columns={[1,2,3,4]} width={["100%","480px","720px","920px"]} columnGap={"15px"} maxWidth={iconWidth * 4} >
-                <SectionButton text={"Text Description"}
-                               imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
-                               linkURL={"https://chakra-ui.com/"} />
-                <SectionButton text={"Text Description"}
-                               imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
-                               linkURL={"https://chakra-ui.com/"} />
-                <SectionButton text={"Text Description"}
-                               imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
-                               linkURL={"https://chakra-ui.com/"} />
-                <SectionButton text={"Text Description"}
-                               imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
-                               linkURL={"https://chakra-ui.com/"} />
+            <Projects enabled={false}/>
 
-              <SectionButton text={"Text Description"}
-                             imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
-                             linkURL={"https://chakra-ui.com/"} />
-              </SimpleGrid>
-              <Box width={["0px","1px"]} />
-            </SimpleGrid>
             <Box paddingTop={"40px"}/>
           </Box>
         </Box>
