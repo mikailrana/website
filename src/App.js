@@ -172,6 +172,7 @@ function Projects(props) {
 let viz    = new CircleViz();
 let player = new AudioPlayer({enableAudioContext:!isMobileBrowser(), decodeAudioBroken:true});
 //let player = new AudioPlayer();
+let currentSelectedSongURL = undefined;
 
 function App() {
 
@@ -181,7 +182,7 @@ function App() {
   const [playerState,setPlayerState] = React.useState("paused");
   const canvasRef = React.useRef(null);
   // unfortunately React SetState is Async? So, we need to track selectedSong
-  let currentSelectedSongURL = undefined;
+
 
   let playSong = (songObject)=> {
     if (selectedSong === songObject){
@@ -201,7 +202,7 @@ function App() {
 
   }
 
-  player.playerStateCallback = (state,songURL) => {
+  player.playerStateCallback = function (state,songURL) {
     if (state !== "stopped" || songURL === currentSelectedSongURL) {
       setPlayerState(state);
       if (state === "stopped") {
