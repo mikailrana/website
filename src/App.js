@@ -1,23 +1,17 @@
 import React from 'react';
 import {
-  chakra,
-  AspectRatio,
   ChakraProvider,
   Box,
-  Icon,
-  Link, Image,
   extendTheme,
   DarkMode,
-  SimpleGrid
 } from '@chakra-ui/react';
 import  bkgImg  from "../src/assets/img/david-marcu.jpg"
-import {FaRegPauseCircle, FaRegPlayCircle} from 'react-icons/fa';
 import {AudioPlayer} from './Player';
-import {Scene,Tracker} from './Scene';
+import {Scene} from './Scene';
 import {CircleViz} from "./Viz";
-import {isMobileBrowser,getWidthAsPixels} from './Utils'
-import {SectionHeader,SectionCategory,MusicCarousel, Projects} from './Components';
-import {canvasWidth,iconWidth} from './Constants';
+import {isMobileBrowser} from './Utils'
+import {SectionHeader,SectionCategory,MusicCarousel, Projects, MusicTile} from './Components';
+import {canvasWidth} from './Constants';
 
 const config = {
   initialColorMode: "light",
@@ -44,17 +38,17 @@ let viz    = new CircleViz();
 // the global audio player object
 let player = new AudioPlayer({enableAudioContext:!isMobileBrowser(), decodeAudioBroken:true});
 // some problems with state, so track url here
-let currentSelectedSongURL = undefined;
+let currentSelectedSongTileId = undefined;
 
 // the app component
-function App(props) {
+function App() {
 
   /** We use React.useState and React.useRef to capture state for this component **/
 
   // we refresh our song list from server (state)
   const [songs, setSongs] = React.useState(undefined);
   // what is the currently selected song (javascript) object (state)
-  const [selectedSong, setSelectedSong] = React.useState(undefined);
+  const [selectedTileId, setSelectedTileId] = React.useState(undefined);
   // player state (playing,paused,stopped)
   const [playerState,setPlayerState] = React.useState("paused");
   // the canvas object (we create this dynamically during playback to render visualization)
@@ -62,8 +56,8 @@ function App(props) {
 
 
   /** playSong callback from onclick handler **/
-  let playSong = (songObject)=> {
-    if (selectedSong === songObject){
+  let playSong = (songObject, tileId)=> {
+    if (selectedTileId === tileId){
       if (player.isPlaying()) {
         player.pauseSong();
       }
@@ -72,20 +66,20 @@ function App(props) {
       }
     }
     else{
-      setSelectedSong(songObject);
-      currentSelectedSongURL = songObject.audioURL;
-      player.playSong(songObject.audioURL);
+      setSelectedTileId(tileId);
+      currentSelectedSongTileId = tileId;
+      player.playSong(songObject.audioURL,tileId);
     }
 
   }
 
   /** setup player state callback to set caputre and update our react state **/
-  player.playerStateCallback = function (state,songURL) {
-    if (state !== "stopped" || songURL === currentSelectedSongURL) {
+  player.playerStateCallback = function (state,songId) {
+    if (state !== "stopped" || songId === currentSelectedSongTileId) {
       setPlayerState(state);
       if (state === "stopped") {
-        setSelectedSong(undefined);
-        currentSelectedSongURL = "";
+        setSelectedTileId(undefined);
+        currentSelectedSongTileId = undefined;
       }
     }
   }
@@ -122,17 +116,15 @@ function App(props) {
   let carouselSections = [];
   /** if songs (state) is defined **/
   if (songs !== undefined) {
+
+    /** create tileId variable **/
+    let lastTileId = 0;
+
     /** walk each song javascript object **/
     songs.forEach(song => {
-      // assume unknown category
-      let category = "unknown";
       // get categories this object maps to ..
       let categories = song.category.split(",");
-      // just take first category for now ...
-      if (categories.length) category = categories[0];
-      // if categoryMap doesn't have this category yet, add category to dictionary
-      if (!categoryMap.has(category))
-        categoryMap.set(category, []);
+
       song.key = song.file
 
       /*
@@ -141,111 +133,47 @@ function App(props) {
       }
       */
 
-      // default icon is play icon
-      var icon = FaRegPlayCircle
-      /*
-      // expand the size of the selected tile
-      if(selectedSong !== undefined && song.key === selectedSong.key) {
-        iconWidth = "300px"
+      for (let category of categories) {
+        /** assign tile id **/
+        let tileId = lastTileId++;
+
+        /** check if selected **/
+        let isSelected = (selectedTileId === tileId)
+
+        /** render tile for current song **/
+        let tile = (<MusicTile song={song}
+                               playSong={playSong}
+                               tileId={tileId}
+                               isSelected={isSelected}
+                               playerState={playerState}
+                               canvasRef={canvasRef}
+                      />)
+
+        category = category.trim()
+        // if categoryMap doesn't have this category yet, add category to dictionary
+        if (!categoryMap.has(category))
+          categoryMap.set(category, []);
+        // add the tile to the appropriate category
+        categoryMap.get(category).push(tile);
       }
-      */
-      /** we render visualization on a canvas if song is playing **/
-      let canvas = undefined;
-      // wrap canvas tag as chakra object in case we need to use it ...
-      let Canvas = chakra('canvas');
-
-      /** if selectSong (state) is current song and player is playing or loading, then render canvas **/
-      if (selectedSong !== undefined && (playerState === "playing" || playerState === "loading") && song.key === selectedSong.key) {
-        // set icon to puase
-        icon = FaRegPauseCircle
-        // set canvas variable to actually contain a Canvas object
-        canvas = (
-          <Canvas
-            opacity={".7"}
-            pos="absolute"
-            zIndex={1000}
-            id='Player-canvas'
-            key='Player-canvas'
-            ref={canvasRef}
-            width={getWidthAsPixels(canvasWidth)}
-            height={getWidthAsPixels(canvasWidth)}
-            onClick={() => {
-              playSong(song);
-            }}
-
-          >
-          </Canvas>);
-      }
-
-      /** render tile for current song **/
-      let tile = (
-        <Box
-          minWidth={getWidthAsPixels(iconWidth)}
-          maxWidth={getWidthAsPixels(iconWidth)}
-          position="relative"
-          width="100%"
-          paddingRight="15px"
-          marginTop="5px"
-          flex="0 0 25%"
-          key={song.key}
-        >
-          {canvas}
-
-          <Box display="flex"
-               flexDirection="column"
-               position="relative"
-          >
-            <Box
-              backgroundImage={song.imageURL}
-              backgroundSize="cover"
-              width="100%"
-              position="relative"
-              _after={{
-                content: `""`,
-                display: "block",
-                paddingBottom: "100%"
-
-              }}
-              onClick={() => {
-                playSong(song);
-              }}
-
-            >
-              <Icon
-                as={icon}
-                color={"white"}
-                pos="absolute"
-                top="50%"
-                left="50%"
-                transform="translate(-50%, -50%)"
-                fontSize="3.5em"
-                opacity="1.0"
-                textShadow="rgb(59 89 152) 0px 0px 15px"
-                filter="drop-shadow( 3px 3px 2px rgba(0, 0, 0, .7));"
-              />
-            </Box>
-            <Box pos="relative"
-                 fontSize={"14px"}
-                 fontWeight={700}
-                 textAlign={"center"}
-                 marginTop={"15px"}
-                 textTransform={"uppercase"}
-            >
-              {song.title}
-            </Box>
-
-          </Box>
-        </Box>
-      );
-      // add the tile to the appropriate category
-      categoryMap.get(category).push(tile);
     })
     /** once we are done building our category dictionary, walk it, and build our carousel objects **/
+    let sortedCategories = []
+    console.log(categoryMap);
+    if (categoryMap.get("Featured") !== undefined) {
+      const cards = categoryMap.get("Featured")
+      sortedCategories.push({category:"Featured", cards})
+      categoryMap.delete("Featured")
+    }
     for (const [category,cards] of categoryMap) {
-      carouselSections.push((<SectionCategory title={category} />));
+      sortedCategories.push({category, cards})
+    }
+    console.log(sortedCategories)
+    for (const obj of sortedCategories) {
+      carouselSections.push((<SectionCategory title={obj.category} />));
       carouselSections.push((
             <MusicCarousel>
-              {cards}
+              {obj.cards}
             </MusicCarousel>));
     }
   }
@@ -268,7 +196,7 @@ function App(props) {
                   height: "100%", width: "100%", content: `""`,
                   zIndex: 2, display: "block",
                   position: "absolute"
-                }}></Box>
+                }}/>
               <Box pos="absolute"
                    top="50%"
                    left="50%"
