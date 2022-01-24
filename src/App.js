@@ -12,7 +12,12 @@ import {
 } from '@chakra-ui/react';
 import  bkgImg  from "../src/assets/img/david-marcu.jpg"
 import {FaRegPauseCircle, FaRegPlayCircle} from 'react-icons/fa';
-import {CircleViz,Scene,AudioPlayer} from "./Viz.js"
+import {AudioPlayer} from './Player';
+import {Scene,Tracker} from './Scene';
+import {CircleViz} from "./Viz";
+import {isMobileBrowser,getWidthAsPixels} from './Utils'
+import {SectionHeader,SectionCategory,MusicCarousel, Projects} from './Components';
+import {canvasWidth,iconWidth} from './Constants';
 
 const config = {
   initialColorMode: "light",
@@ -21,28 +26,6 @@ const config = {
 
 let firebase = require("firebase/firebase") ;
 
-// add a script to detect if we are on a mobile browser
-//https://stackoverflow.com/questions/58141018/mobile-device-detection
-let isMobileBrowser = () => {
-  let hasTouchScreen = false;
-  if ("maxTouchPoints" in navigator) {
-    hasTouchScreen = navigator.maxTouchPoints > 0;
-  } else if ("msMaxTouchPoints" in navigator) {
-    hasTouchScreen = navigator['msMaxTouchPoints'] > 0;
-  } else {
-    let mQ = window.matchMedia && matchMedia("(pointer:coarse)");
-    if (mQ && mQ.media === "(pointer:coarse)") {
-      hasTouchScreen = !!mQ.matches;
-    } else if ('orientation' in window) {
-      hasTouchScreen = true; // deprecated, but good fallback
-    }
-  }
-
-  //const md = new MobileDetect(window.navigator.userAgent);
-  //const isMobileDetected = Object.isNotNull(md.mobile()) || Object.isNotNull(md.phone()) || Object.isNotNull(md.tablet());
-
-  return hasTouchScreen;
-}
 
 
 const customTheme = extendTheme({
@@ -56,134 +39,29 @@ const customTheme = extendTheme({
   }
 })
 
-let iconWidth="230px"
-let iconWidth_Buffer="250px"
-let canvasWidth=215;
-let canvasWidthPx = "215px";
-
-function SectionButton(props) {
-    return (
-        <Link href={props.linkURL}
-              width={['100%','100%',iconWidth - 15]}
-              minWidth={iconWidth}
-        >
-          <AspectRatio maxW={['100%','100%',iconWidth]} ratio={1 / 1}>
-            <Image
-                maxHeight={"100%"}
-                maxWidth={"auto"}
-                paddingLeft={"5px"}
-                paddingRight={"5px"}
-                aspectRatio={"1"}
-                margin={"0 auto"}
-            textDecoration='none'
-            src={props.imageURL}/>
-          </AspectRatio>
-            <Box
-                fontWeight={"700"}
-                fontSize={"14px"}
-                textAlign={"center"}
-                color={"black"}
-                >
-                {props.text}
-            </Box>
-        </Link>
-    )
-}
-
-function SectionHeader(props) {
-  return (
-      <Box
-          m={"30px 0 15px 0"}
-          fontFamily={"'Raleway', sans-serif"}
-          fontWeight={700}
-          fontSize={"40px"}
-          lineHeight={"100%"}>
-        {props.title}
-      </Box>
-  )
-}
-
-function SectionCategory(props) {
-  return (
-      <Box
-          fontSize={"19px"}
-          fontWeight={300}
-      >{props.title}</Box>
-  )
-}
-
-function MusicCarousel(props) {
-  return (
-
-      <Box
-          minHeight={iconWidth_Buffer}
-          paddingTop="20px"
-          marginBottom={"20px"}
-          overflowX="auto"
-          width="100%"
-          paddingRight="15px"
-      >
-        <Box
-            display="flex"
-            flexWrap="nowrap"
-        >
-          {props.children}
-        </Box>
-      </Box>
-  )
-}
-
-function Projects(props) {
-  if (props.enabled) {
-    return (
-      <Box>
-        <SectionHeader title={"Projects"}/>
-          <SectionCategory title={"Made in JS and Python"}/>
-          <SimpleGrid columns={[1, 2]}>
-            <SimpleGrid columns={[1, 2, 3, 4]} width={["100%", "480px", "720px", "920px"]} columnGap={"15px"}
-                        maxWidth={iconWidth * 4}>
-              <SectionButton text={"Text Description"}
-                             imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
-                             linkURL={"https://chakra-ui.com/"}/>
-              <SectionButton text={"Text Description"}
-                             imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
-                             linkURL={"https://chakra-ui.com/"}/>
-              <SectionButton text={"Text Description"}
-                             imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
-                             linkURL={"https://chakra-ui.com/"}/>
-              <SectionButton text={"Text Description"}
-                             imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
-                             linkURL={"https://chakra-ui.com/"}/>
-
-              <SectionButton text={"Text Description"}
-                             imageURL={"https://firebasestorage.googleapis.com/v0/b/mikmusic-8c7e3.appspot.com/o/NewStuff%2FChecks%20Image.jpg?alt=media"}
-                             linkURL={"https://chakra-ui.com/"}/>
-            </SimpleGrid>
-            <Box width={["0px", "1px"]}/>
-          </SimpleGrid>
-      </Box>
-    )
-  }
-  else {
-    return null;
-  }
-}
-
+// the circle visualizer
 let viz    = new CircleViz();
+// the global audio player object
 let player = new AudioPlayer({enableAudioContext:!isMobileBrowser(), decodeAudioBroken:true});
-//let player = new AudioPlayer();
+// some problems with state, so track url here
 let currentSelectedSongURL = undefined;
 
-function App() {
+// the app component
+function App(props) {
 
+  /** We use React.useState and React.useRef to capture state for this component **/
+
+  // we refresh our song list from server (state)
   const [songs, setSongs] = React.useState(undefined);
+  // what is the currently selected song (javascript) object (state)
   const [selectedSong, setSelectedSong] = React.useState(undefined);
-  const [selectedSongURL, setSelectedSongURL] = React.useState("");
+  // player state (playing,paused,stopped)
   const [playerState,setPlayerState] = React.useState("paused");
+  // the canvas object (we create this dynamically during playback to render visualization)
   const canvasRef = React.useRef(null);
-  // unfortunately React SetState is Async? So, we need to track selectedSong
 
 
+  /** playSong callback from onclick handler **/
   let playSong = (songObject)=> {
     if (selectedSong === songObject){
       if (player.isPlaying()) {
@@ -195,55 +73,64 @@ function App() {
     }
     else{
       setSelectedSong(songObject);
-      setSelectedSongURL(songObject.audioURL);
       currentSelectedSongURL = songObject.audioURL;
       player.playSong(songObject.audioURL);
     }
 
   }
 
+  /** setup player state callback to set caputre and update our react state **/
   player.playerStateCallback = function (state,songURL) {
     if (state !== "stopped" || songURL === currentSelectedSongURL) {
       setPlayerState(state);
       if (state === "stopped") {
         setSelectedSong(undefined);
-        setSelectedSongURL("");
         currentSelectedSongURL = "";
       }
     }
   }
 
+  /** useEffect allows us to initialize the Scene object during component initialization **/
   React.useEffect(() => {
     new Scene(player,viz,canvasRef,canvasWidth);
-
-    /*
-    if (audioElementRef.current !== null && audioContext === undefined) {
-      // @ts-ignore
-      audioElementRef.current.audio.current.crossOrigin = "anonymous";
-    }
-    */
   });
 
+  /** if songs (state) is undefined, then make a call to firestore to get list of latest songs **/
   if (songs === undefined) {
+    // get a collection ref to the music2 collection in firestore
     var musicCollectionRef = firebase.firestore().collection("music2");
+    // call the ref's get method (which returns a promise)
+    // attach a promise handler (when server call completes asynchronously)
     musicCollectionRef.get().then(
+      // callback function invoked by promise (takes querySnapshot object)
       (querySnapshot) => {
+        // declare a temporary music array
         var music = []
+        // querySnapshot is a snapshot of the music2 collection
+        // iterate querySnapshot (contains song objects)
         querySnapshot.forEach((doc) => {
+          // append song objects to music Array
           music.push(doc.data())
         });
         //console.log(music);
         setSongs(music);
       })
   }
-
+  /** we are going to create a dictionary (key(name of category),value(array of React object)) songs into categories based on category attribute **/
   let categoryMap = new Map();
+  /** for each category, we create a react carousel object **/
   let carouselSections = [];
+  /** if songs (state) is defined **/
   if (songs !== undefined) {
+    /** walk each song javascript object **/
     songs.forEach(song => {
+      // assume unknown category
       let category = "unknown";
+      // get categories this object maps to ..
       let categories = song.category.split(",");
+      // just take first category for now ...
       if (categories.length) category = categories[0];
+      // if categoryMap doesn't have this category yet, add category to dictionary
       if (!categoryMap.has(category))
         categoryMap.set(category, []);
       song.key = song.file
@@ -254,16 +141,24 @@ function App() {
       }
       */
 
+      // default icon is play icon
       var icon = FaRegPlayCircle
       /*
+      // expand the size of the selected tile
       if(selectedSong !== undefined && song.key === selectedSong.key) {
         iconWidth = "300px"
       }
       */
+      /** we render visualization on a canvas if song is playing **/
       let canvas = undefined;
+      // wrap canvas tag as chakra object in case we need to use it ...
       let Canvas = chakra('canvas');
+
+      /** if selectSong (state) is current song and player is playing or loading, then render canvas **/
       if (selectedSong !== undefined && (playerState === "playing" || playerState === "loading") && song.key === selectedSong.key) {
+        // set icon to puase
         icon = FaRegPauseCircle
+        // set canvas variable to actually contain a Canvas object
         canvas = (
           <Canvas
             opacity={".7"}
@@ -272,8 +167,8 @@ function App() {
             id='Player-canvas'
             key='Player-canvas'
             ref={canvasRef}
-            width={canvasWidthPx}
-            height={canvasWidthPx}
+            width={getWidthAsPixels(canvasWidth)}
+            height={getWidthAsPixels(canvasWidth)}
             onClick={() => {
               playSong(song);
             }}
@@ -281,10 +176,12 @@ function App() {
           >
           </Canvas>);
       }
-      let fragment = (
+
+      /** render tile for current song **/
+      let tile = (
         <Box
-          minWidth={iconWidth}
-          maxWidth={iconWidth}
+          minWidth={getWidthAsPixels(iconWidth)}
+          maxWidth={getWidthAsPixels(iconWidth)}
           position="relative"
           width="100%"
           paddingRight="15px"
@@ -340,8 +237,10 @@ function App() {
           </Box>
         </Box>
       );
-      categoryMap.get(category).push(fragment);
+      // add the tile to the appropriate category
+      categoryMap.get(category).push(tile);
     })
+    /** once we are done building our category dictionary, walk it, and build our carousel objects **/
     for (const [category,cards] of categoryMap) {
       carouselSections.push((<SectionCategory title={category} />));
       carouselSections.push((
@@ -349,10 +248,11 @@ function App() {
               {cards}
             </MusicCarousel>));
     }
-  console.log(carouselSections);
   }
+
+  /** always render audio elemenet (to play audio **/
   let audioElement = player.renderAudioElement();
-  // <audio id={AudioPlayer.AudioPlayerId} crossOrigin={"anonymous"} src={selectedSongURL} autoPlay={true} ref={player.audioObjectRef}/>
+  /** actually render the page **/
   return (
     <ChakraProvider theme={customTheme}>
       <DarkMode>
