@@ -18,6 +18,7 @@ export class AudioPlayer  {
     this.firstLaunch=true;
     this.decodedBuffer=undefined;
     this.currentSongURL=undefined;
+    this.currentSongId=undefined;
     this.loading=false;
     this.paused=false;
     this.playing=false;
@@ -69,7 +70,7 @@ export class AudioPlayer  {
       this.loading = false;
       this.playing = true;
       if (this.playerStateCallback !== undefined) {
-        this.playerStateCallback("playing",this.currentSongURL);
+        this.playerStateCallback("playing",this.currentSongId);
       }
       this.props.onCanPlay && this.props.onCanPlay(e)
     })
@@ -128,7 +129,7 @@ export class AudioPlayer  {
     //  when loading of the media begins
     audio.addEventListener('loadstart', (e) => {
       if (this.playerStateCallback !== undefined) {
-        this.playerStateCallback("loading",this.currentSongURL);
+        this.playerStateCallback("loading",this.currentSongId);
       }
 
       this.props.onLoadStart && this.props.onLoadStart(e)
@@ -203,9 +204,10 @@ export class AudioPlayer  {
       this.loading = false;
       this.playing = false;
       if (this.playerStateCallback !== undefined) {
-        this.playerStateCallback("stopped",this.currentSongURL)
+        this.playerStateCallback("stopped",this.currentSongId)
       }
       this.currentSongURL = undefined;
+      this.currentSongId  = undefined;
     }
     else {
       console.log({current:this.source, source})
@@ -217,7 +219,6 @@ export class AudioPlayer  {
       return (
         <audio
           id = {this.audioPlaysCounter}
-          src={this.currentSongURL}
           controls={false}
           loop={false}
           autoPlay={true}
@@ -232,7 +233,10 @@ export class AudioPlayer  {
 
   playAudioElementSource(url) {
     this.audioPlaysCounter++;
-    this.audioObjectRef.current  && this.audioObjectRef.current.pause();
+    if (this.audioObjectRef.current !== null) {
+      this.audioObjectRef.current && this.audioObjectRef.current.pause();
+      this.audioObjectRef.current.src = url;
+    }
 
     // this.audioObject.src = url;
 
@@ -270,7 +274,7 @@ export class AudioPlayer  {
       this.loading = false;
       this.playing = true;
       if (this.playerStateCallback !== undefined) {
-        this.playerStateCallback("playing",this.currentSongURL);
+        this.playerStateCallback("playing",this.currentSongId);
       }
       let source = this.source;
       this.source.onended = () => this.playbackStopped(source);
@@ -298,7 +302,7 @@ export class AudioPlayer  {
       this.playing = false;
       this.loading = false;
       if (this.playerStateCallback !== undefined) {
-        this.playerStateCallback("stopped",this.currentSongURL)
+        this.playerStateCallback("stopped",this.currentSongId)
       }
     }
     else {
@@ -310,13 +314,14 @@ export class AudioPlayer  {
     this.frequencyData = undefined;
   }
 
-  playSong(url,audioElementRef)  {
+  playSong(url,songId)  {
     if (this.firstLaunch) {
       this.init();
     }
     this.stop();
 
     this.currentSongURL = url;
+    this.currentSongId  = songId;
 
     if (this.enableAudioContext && !this.decodeAudioBroken) {
       this.loading = true;

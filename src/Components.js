@@ -2,16 +2,14 @@ import React from 'react';
 import {
   chakra,
   AspectRatio,
-  ChakraProvider,
   Box,
   Icon,
   Link, Image,
-  extendTheme,
-  DarkMode,
   SimpleGrid
 } from '@chakra-ui/react';
 import { iconWidth, canvasWidth, iconWidth_Buffer } from './Constants';
 import {getWidthAsPixels} from './Utils';
+import {FaRegPauseCircle, FaRegPlayCircle} from 'react-icons/fa';
 
 export function SectionButton(props) {
   return (
@@ -119,4 +117,105 @@ export function Projects(props) {
   else {
     return null;
   }
+}
+
+export function MusicTile(props) {
+
+  // default icon is play icon
+  var icon = FaRegPlayCircle
+
+  /*
+  // expand the size of the selected tile
+  if(selectedSong !== undefined && song.key === selectedSong.key) {
+    iconWidth = "300px"
+  }
+  */
+  /** we render visualization on a canvas if song is playing **/
+  let canvas = undefined;
+  // wrap canvas tag as chakra object in case we need to use it ...
+  let Canvas = chakra('canvas');
+
+  /** if selectSong (state) is current song and player is playing or loading, then render canvas **/
+  if ((props.playerState === "playing" || props.playerState === "loading") && props.isSelected) {
+    // set icon to puase
+    icon = FaRegPauseCircle
+    // set canvas variable to actually contain a Canvas object
+    canvas = (
+        <Canvas
+            opacity={".7"}
+            pos="absolute"
+            zIndex={1000}
+            id='Player-canvas'
+            key='Player-canvas'
+            ref={props.canvasRef}
+            width={getWidthAsPixels(canvasWidth)}
+            height={getWidthAsPixels(canvasWidth)}
+            onClick={() => {
+              props.playSong(props.song,props.tileId);
+            }}
+
+        >
+        </Canvas>);
+  }
+
+  return(
+      <Box
+          minWidth={getWidthAsPixels(iconWidth)}
+          maxWidth={getWidthAsPixels(iconWidth)}
+          position="relative"
+          width="100%"
+          paddingRight="15px"
+          marginTop="5px"
+          flex="0 0 25%"
+          key={props.song.key}
+      >
+        {canvas}
+
+        <Box display="flex"
+             flexDirection="column"
+             position="relative"
+        >
+          <Box
+              backgroundImage={props.song.imageURL}
+              backgroundSize="cover"
+              width="100%"
+              position="relative"
+              _after={{
+                content: `""`,
+                display: "block",
+                paddingBottom: "100%"
+
+              }}
+              onClick={() => {
+                if (props.playSong  !== undefined){
+                  props.playSong(props.song, props.tileId);
+                }
+              }}
+          >
+            <Icon
+                as={icon}
+                color={"white"}
+                pos="absolute"
+                top="50%"
+                left="50%"
+                transform="translate(-50%, -50%)"
+                fontSize="3.5em"
+                opacity="1.0"
+                textShadow="rgb(59 89 152) 0px 0px 15px"
+                filter="drop-shadow( 3px 3px 2px rgba(0, 0, 0, .7));"
+            />
+          </Box>
+          <Box pos="relative"
+               fontSize={"14px"}
+               fontWeight={700}
+               textAlign={"center"}
+               marginTop={"15px"}
+               textTransform={"uppercase"}
+          >
+            {props.song.title}
+          </Box>
+
+        </Box>
+      </Box>
+  );
 }
