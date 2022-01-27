@@ -140,23 +140,46 @@ function App() {
         /** check if selected **/
         let isSelected = (selectedTileId === tileId)
 
-        /** render tile for current song **/
-        let tile = (<MusicTile song={song}
-                               playSong={playSong}
-                               tileId={tileId}
-                               isSelected={isSelected}
-                               playerState={playerState}
-                               canvasRef={canvasRef}
-                      />)
+        /** Capture tile id, is selected, and song object, and store it in category array. **/
+        let placeHolder = {tileId, isSelected, song}
 
+        /** Stash placeholder in appropriate category array. **/
         category = category.trim()
         // if categoryMap doesn't have this category yet, add category to dictionary
         if (!categoryMap.has(category))
           categoryMap.set(category, []);
         // add the tile to the appropriate category
-        categoryMap.get(category).push(tile);
+        categoryMap.get(category).push(placeHolder);
       }
     })
+
+    for (const [,cards] of categoryMap) {
+      for (let index = 0; index < cards.length; index++) {
+        let current = cards[index];
+        let next = undefined;
+        if (index !== cards.length - 1) {
+          next = cards[index + 1]
+        }
+
+        /** render tile for current song **/
+        let tile = (<MusicTile song={current.song}
+                               playSong={playSong}
+                               tileId={current.tileId}
+                               isSelected={current.isSelected}
+                               playerState={playerState}
+                               canvasRef={canvasRef}
+                               nextTileId={(next !== undefined) ? next.tileId : undefined}
+                               nextSong={(next !== undefined) ? next.song : undefined}
+        />)
+
+        /** Replace placeholder with tile object. **/
+        cards.splice(index, 1, tile)
+      }
+    }
+
+
+
+
     /** once we are done building our category dictionary, walk it, and build our carousel objects **/
     let sortedCategories = []
     console.log(categoryMap);
