@@ -40,6 +40,54 @@ let player = new AudioPlayer({enableAudioContext:!isMobileBrowser(), decodeAudio
 // some problems with state, so track url here
 let currentSelectedSongTileId = undefined;
 
+/** create a category dictionary given songs array
+ *
+ * Basically, walk songs array and split by category and assign tile id and
+ * other information upfront
+ * **/
+function buildCategoryDictionary(songsArray) {
+
+  let lastTileId = 0;
+
+  /** we are going to create a dictionary (key(name of category),value(array of React object)) songs into categories based on category attribute **/
+  let categoryMap = new Map();
+
+  /** walk each song javascript object **/
+  songsArray.forEach(song => {
+    // get categories this object maps to ..
+    let categories = song.category.split(",");
+
+    song.key = song.file
+
+    /*
+    if (process.env.NODE_ENV === "development") {
+      song.url = song.url.replace(/^https:\/\/firebasestorage.googleapis.com/, '/fbs');
+    }
+    */
+
+    for (let category of categories) {
+      /** assign tile id **/
+      let tileId = lastTileId++;
+
+      /** Stash placeholder in appropriate category array. **/
+      category = category.trim()
+      // if categoryMap doesn't have this category yet, add category to dictionary
+      if (!categoryMap.has(category))
+        categoryMap.set(category, []);
+      // get the array
+      let categoryArray = categoryMap.get(category)
+      /** Capture tile id, is selected, and song object, and store it in category array. **/
+      let songInfo = {tileId, song, category, index: categoryArray.length}
+
+      // add the tile to the appropriate category
+      categoryMap.get(category).push(songInfo);
+    }
+  })
+  return categoryMap;
+}
+
+let categoryDictionary = undefined;
+
 // the app component
 function App() {
 
@@ -56,7 +104,7 @@ function App() {
 
 
   /** playSong callback from onclick handler **/
-  let playSong = (songObject, tileId)=> {
+  let playSong = (songObject, tileId, category, index)=> {
     if (selectedTileId === tileId){
       if (player.isPlaying()) {
         player.pauseSong();
@@ -68,18 +116,29 @@ function App() {
     else{
       setSelectedTileId(tileId);
       currentSelectedSongTileId = tileId;
-      player.playSong(songObject.audioURL,tileId);
+      player.playSong(songObject.audioURL,tileId, {category, index});
     }
 
   }
 
   /** setup player state callback to set caputre and update our react state **/
-  player.playerStateCallback = function (state,songId) {
+  player.playerStateCallback = function (state,songId, songInfo) {
     if (state !== "stopped" || songId === currentSelectedSongTileId) {
       setPlayerState(state);
       if (state === "stopped") {
-        setSelectedTileId(undefined);
-        currentSelectedSongTileId = undefined;
+        // get current category array.
+        let songArray = categoryDictionary.get(songInfo.category);
+        // check if current song index != last index
+        if(songInfo.index < songArray.length -1) {
+          // Get next song info
+          let nextSongInfo = songArray[songInfo.index + 1]
+          // Play next song
+          playSong(nextSongInfo.song, nextSongInfo.tileId, nextSongInfo.category, nextSongInfo.index);
+        }
+        else {
+          setSelectedTileId(undefined);
+          currentSelectedSongTileId = undefined;
+        }
       }
     }
   }
@@ -108,72 +167,42 @@ function App() {
         });
         //console.log(music);
         setSongs(music);
+
+        // populate category dictionary
+        categoryDictionary = buildCategoryDictionary(music);
+
       })
   }
-  /** we are going to create a dictionary (key(name of category),value(array of React object)) songs into categories based on category attribute **/
-  let categoryMap = new Map();
   /** for each category, we create a react carousel object **/
   let carouselSections = [];
   /** if songs (state) is defined **/
   if (songs !== undefined) {
+    let categoryMap = new Map()
 
-    /** create tileId variable **/
-    let lastTileId = 0;
-
-    /** walk each song javascript object **/
-    songs.forEach(song => {
-      // get categories this object maps to ..
-      let categories = song.category.split(",");
-
-      song.key = song.file
-
-      /*
-      if (process.env.NODE_ENV === "development") {
-        song.url = song.url.replace(/^https:\/\/firebasestorage.googleapis.com/, '/fbs');
-      }
-      */
-
-      for (let category of categories) {
-        /** assign tile id **/
-        let tileId = lastTileId++;
-
-        /** check if selected **/
-        let isSelected = (selectedTileId === tileId)
-
-        /** Capture tile id, is selected, and song object, and store it in category array. **/
-        let placeHolder = {tileId, isSelected, song}
-
-        /** Stash placeholder in appropriate category array. **/
-        category = category.trim()
-        // if categoryMap doesn't have this category yet, add category to dictionary
-        if (!categoryMap.has(category))
-          categoryMap.set(category, []);
-        // add the tile to the appropriate category
-        categoryMap.get(category).push(placeHolder);
-      }
-    })
-
-    for (const [,cards] of categoryMap) {
+    /** Populate music tiles **/
+    for (const [category,cards] of categoryDictionary) {
+      /** Add empty cards array to category map dictionary based on category name. **/
+      let tiles = []
+      categoryMap.set(category, tiles);
       for (let index = 0; index < cards.length; index++) {
         let current = cards[index];
-        let next = undefined;
-        if (index !== cards.length - 1) {
-          next = cards[index + 1]
-        }
+
+        /** check if selected **/
+        let isSelected = (selectedTileId === current.tileId)
 
         /** render tile for current song **/
         let tile = (<MusicTile song={current.song}
                                playSong={playSong}
                                tileId={current.tileId}
-                               isSelected={current.isSelected}
+                               isSelected={isSelected}
                                playerState={playerState}
                                canvasRef={canvasRef}
-                               nextTileId={(next !== undefined) ? next.tileId : undefined}
-                               nextSong={(next !== undefined) ? next.song : undefined}
+                               category={current.category}
+                               index={current.index}
         />)
 
-        /** Replace placeholder with tile object. **/
-        cards.splice(index, 1, tile)
+        /** Add tile object to cards array. **/
+        tiles.push(tile)
       }
     }
 

@@ -19,6 +19,7 @@ export class AudioPlayer  {
     this.decodedBuffer=undefined;
     this.currentSongURL=undefined;
     this.currentSongId=undefined;
+    this.currentSongInfo=undefined;
     this.loading=false;
     this.paused=false;
     this.playing=false;
@@ -70,7 +71,7 @@ export class AudioPlayer  {
       this.loading = false;
       this.playing = true;
       if (this.playerStateCallback !== undefined) {
-        this.playerStateCallback("playing",this.currentSongId);
+        this.playerStateCallback("playing",this.currentSongId, this.currentSongInfo);
       }
       this.props.onCanPlay && this.props.onCanPlay(e)
     })
@@ -129,7 +130,7 @@ export class AudioPlayer  {
     //  when loading of the media begins
     audio.addEventListener('loadstart', (e) => {
       if (this.playerStateCallback !== undefined) {
-        this.playerStateCallback("loading",this.currentSongId);
+        this.playerStateCallback("loading",this.currentSongId,this.currentSongInfo);
       }
 
       this.props.onLoadStart && this.props.onLoadStart(e)
@@ -204,10 +205,11 @@ export class AudioPlayer  {
       this.loading = false;
       this.playing = false;
       if (this.playerStateCallback !== undefined) {
-        this.playerStateCallback("stopped",this.currentSongId)
+        this.playerStateCallback("stopped",this.currentSongId,this.currentSongInfo)
       }
       this.currentSongURL = undefined;
       this.currentSongId  = undefined;
+      this.currentSongInfo = undefined;
     }
     else {
       console.log({current:this.source, source})
@@ -274,7 +276,7 @@ export class AudioPlayer  {
       this.loading = false;
       this.playing = true;
       if (this.playerStateCallback !== undefined) {
-        this.playerStateCallback("playing",this.currentSongId);
+        this.playerStateCallback("playing",this.currentSongId,this.currentSongInfo);
       }
       let source = this.source;
       this.source.onended = () => this.playbackStopped(source);
@@ -302,7 +304,7 @@ export class AudioPlayer  {
       this.playing = false;
       this.loading = false;
       if (this.playerStateCallback !== undefined) {
-        this.playerStateCallback("stopped",this.currentSongId)
+        this.playerStateCallback("stopped",this.currentSongId,this.currentSongInfo)
       }
     }
     else {
@@ -314,7 +316,7 @@ export class AudioPlayer  {
     this.frequencyData = undefined;
   }
 
-  playSong(url,songId)  {
+  playSong(url,songId,songInfo)  {
     if (this.firstLaunch) {
       this.init();
     }
@@ -322,6 +324,7 @@ export class AudioPlayer  {
 
     this.currentSongURL = url;
     this.currentSongId  = songId;
+    this.currentSongInfo = songInfo;
 
     if (this.enableAudioContext && !this.decodeAudioBroken) {
       this.loading = true;
