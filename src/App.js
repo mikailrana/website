@@ -86,15 +86,13 @@ function buildCategoryDictionary(songsArray) {
   return categoryMap;
 }
 
-let categoryDictionary = undefined;
-
 // the app component
 function App() {
 
   /** We use React.useState and React.useRef to capture state for this component **/
 
   // we refresh our song list from server (state)
-  const [songs, setSongs] = React.useState(undefined);
+  const [songsAndCategories, setSongsAndCategories] = React.useState(undefined);
   // what is the currently selected song (javascript) object (state)
   const [selectedTileId, setSelectedTileId] = React.useState(undefined);
   // player state (playing,paused,stopped)
@@ -127,7 +125,7 @@ function App() {
       setPlayerState(state);
       if (state === "stopped") {
         // get current category array.
-        let songArray = categoryDictionary.get(songInfo.category);
+        let songArray = songsAndCategories.categoryDictionary.get(songInfo.category);
         // check if current song index != last index
         if(songInfo.index < songArray.length -1) {
           // Get next song info
@@ -152,7 +150,7 @@ function App() {
   let carouselSections = [];
 
   /** if songs (state) is undefined, then make a call to firestore to get list of latest songs **/
-  if (songs === undefined) {
+  if (songsAndCategories === undefined) {
     // get a collection ref to the music2 collection in firestore
     var musicCollectionRef = firebase.firestore().collection("music2");
     // call the ref's get method (which returns a promise)
@@ -168,16 +166,19 @@ function App() {
           // append song objects to music Array
           music.push(doc.data())
         });
-        //console.log(music);
-        setSongs(music);
-
         // populate category dictionary
-        categoryDictionary = buildCategoryDictionary(music);
+        let categoryDictionary = buildCategoryDictionary(music);
 
+        // set both states together
+        setSongsAndCategories({songs:music,categoryDictionary})
       })
   }
   else {
     /** if songs (state) is defined **/
+    let songs = songsAndCategories.songs
+    let categoryDictionary = songsAndCategories.categoryDictionary
+    console.log("Songs and Categories")
+    console.log(songsAndCategories)
     if (songs !== undefined && categoryDictionary !== undefined) {
       let categoryMap = new Map()
 
