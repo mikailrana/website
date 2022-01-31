@@ -148,6 +148,9 @@ function App() {
     new Scene(player,viz,canvasRef,canvasWidth);
   });
 
+  /** for each category, we create a react carousel object **/
+  let carouselSections = [];
+
   /** if songs (state) is undefined, then make a call to firestore to get list of latest songs **/
   if (songs === undefined) {
     // get a collection ref to the music2 collection in firestore
@@ -173,60 +176,58 @@ function App() {
 
       })
   }
-  /** for each category, we create a react carousel object **/
-  let carouselSections = [];
-  /** if songs (state) is defined **/
-  if (songs !== undefined) {
-    let categoryMap = new Map()
+  else {
+    /** if songs (state) is defined **/
+    if (songs !== undefined && categoryDictionary !== undefined) {
+      let categoryMap = new Map()
 
-    /** Populate music tiles **/
-    for (const [category,cards] of categoryDictionary) {
-      /** Add empty cards array to category map dictionary based on category name. **/
-      let tiles = []
-      categoryMap.set(category, tiles);
-      for (let index = 0; index < cards.length; index++) {
-        let current = cards[index];
+      /** Populate music tiles **/
+      for (const [category, cards] of categoryDictionary) {
+        /** Add empty cards array to category map dictionary based on category name. **/
+        let tiles = []
+        categoryMap.set(category, tiles);
+        for (let index = 0; index < cards.length; index++) {
+          let current = cards[index];
 
-        /** check if selected **/
-        let isSelected = (selectedTileId === current.tileId)
+          /** check if selected **/
+          let isSelected = (selectedTileId === current.tileId)
 
-        /** render tile for current song **/
-        let tile = (<MusicTile song={current.song}
-                               playSong={playSong}
-                               tileId={current.tileId}
-                               isSelected={isSelected}
-                               playerState={playerState}
-                               canvasRef={canvasRef}
-                               category={current.category}
-                               index={current.index}
-        />)
+          /** render tile for current song **/
+          let tile = (<MusicTile song={current.song}
+                                 playSong={playSong}
+                                 tileId={current.tileId}
+                                 isSelected={isSelected}
+                                 playerState={playerState}
+                                 canvasRef={canvasRef}
+                                 category={current.category}
+                                 index={current.index}
+          />)
 
-        /** Add tile object to cards array. **/
-        tiles.push(tile)
+          /** Add tile object to cards array. **/
+          tiles.push(tile)
+        }
       }
-    }
 
 
-
-
-    /** once we are done building our category dictionary, walk it, and build our carousel objects **/
-    let sortedCategories = []
-    console.log(categoryMap);
-    if (categoryMap.get("Featured") !== undefined) {
-      const cards = categoryMap.get("Featured")
-      sortedCategories.push({category:"Featured", cards})
-      categoryMap.delete("Featured")
-    }
-    for (const [category,cards] of categoryMap) {
-      sortedCategories.push({category, cards})
-    }
-    console.log(sortedCategories)
-    for (const obj of sortedCategories) {
-      carouselSections.push((<SectionCategory title={obj.category} />));
-      carouselSections.push((
-            <MusicCarousel>
-              {obj.cards}
-            </MusicCarousel>));
+      /** once we are done building our category dictionary, walk it, and build our carousel objects **/
+      let sortedCategories = []
+      console.log(categoryMap);
+      if (categoryMap.get("Featured") !== undefined) {
+        const cards = categoryMap.get("Featured")
+        sortedCategories.push({ category: "Featured", cards })
+        categoryMap.delete("Featured")
+      }
+      for (const [category, cards] of categoryMap) {
+        sortedCategories.push({ category, cards })
+      }
+      console.log(sortedCategories)
+      for (const obj of sortedCategories) {
+        carouselSections.push((<SectionCategory title={obj.category}/>));
+        carouselSections.push((
+          <MusicCarousel>
+            {obj.cards}
+          </MusicCarousel>));
+      }
     }
   }
 
