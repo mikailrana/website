@@ -151,7 +151,7 @@ export function MusicTile(props) {
             width={getWidthAsPixels(canvasWidth)}
             height={getWidthAsPixels(canvasWidth)}
             onClick={() => {
-              props.playSong(props.song,props.tileId);
+              props.playSong(props.song,props.tileId,props.category,props.index);
             }}
 
         >
@@ -188,7 +188,7 @@ export function MusicTile(props) {
               }}
               onClick={() => {
                 if (props.playSong  !== undefined){
-                  props.playSong(props.song, props.tileId);
+                  props.playSong(props.song, props.tileId, props.category, props.index);
                 }
               }}
           >
