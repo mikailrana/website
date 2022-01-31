@@ -220,7 +220,6 @@ export class AudioPlayer  {
     if (!this.enableAudioContext || this.decodeAudioBroken) {
       return (
         <audio
-          id = {this.audioPlaysCounter}
           controls={false}
           loop={false}
           autoPlay={true}
