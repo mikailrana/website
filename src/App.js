@@ -11,7 +11,17 @@ import {Scene} from './Scene';
 import {CircleViz} from "./Viz";
 import {isMobileBrowser} from './Utils'
 import {SectionHeader,SectionCategory,MusicCarousel, Projects, MusicTile} from './Components';
+import {ToneExperiment} from './experiments/tonejs_experiment'
 import {canvasWidth} from './Constants';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Link,
+  useRouteMatch,
+  useParams
+} from "react-router-dom";
+
 
 const config = {
   initialColorMode: "light",
@@ -88,8 +98,8 @@ function buildCategoryDictionary(songsArray) {
 
 let categoryDictionary = undefined;
 
-// the app component
-function App() {
+// the home screen
+function Home() {
 
   /** We use React.useState and React.useRef to capture state for this component **/
 
@@ -234,71 +244,84 @@ function App() {
   let audioElement = player.renderAudioElement();
   /** actually render the page **/
   return (
-    <ChakraProvider theme={customTheme}>
-      <DarkMode>
-        {audioElement}
-        <Box fontFamily={"Roboto"}>
-          <Box padding={"24px"} _after={{boxSizing: "border-box"}}>
-            <Box minHeight={"50vh"} maxHeight={"200px"}
-                 backgroundImage={bkgImg} backgroundSize={"cover"}
-                 backgroundPosition={"center center"} position={"relative"}>
-              <Box _after={
-                {
-                  backgroundColor: "rgba(0, 0, 0, 0.5)",
-                  height: "100%", width: "100%", content: `""`,
-                  zIndex: 2, display: "block",
-                  position: "absolute"
-                }}/>
-              <Box pos="absolute"
-                   top="50%"
-                   left="50%"
-                   zIndex="3"
-                   transform="translate(-50%, -50%)"
-                   textAlign="center"
-                   color="white"
-                   width="100%">
-
-                <Box
-                  paddingLeft="15px"
-                  paddingRight="15px"
-                  width="100%"
-                  pos="relative">
+          <Box>
+          {audioElement}
+          <Box fontFamily={"Roboto"}>
+            <Box padding={"24px"} _after={{boxSizing: "border-box"}}>
+              <Box minHeight={"50vh"} maxHeight={"200px"}
+                   backgroundImage={bkgImg} backgroundSize={"cover"}
+                   backgroundPosition={"center center"} position={"relative"}>
+                <Box _after={
+                  {
+                    backgroundColor: "rgba(0, 0, 0, 0.5)",
+                    height: "100%", width: "100%", content: `""`,
+                    zIndex: 2, display: "block",
+                    position: "absolute"
+                  }}/>
+                <Box pos="absolute"
+                     top="50%"
+                     left="50%"
+                     zIndex="3"
+                     transform="translate(-50%, -50%)"
+                     textAlign="center"
+                     color="white"
+                     width="100%">
 
                   <Box
-                    pos="relative"
-                    textAlign="center"
-                    fontWeight="thin"
-                    fontFamily='"Montserrat", "Helvetica", Arial, sans-serif'
-                  >
+                    paddingLeft="15px"
+                    paddingRight="15px"
+                    width="100%"
+                    pos="relative">
+
                     <Box
-                      marginTop="30px"
-                      marginBottom="20px"
-                      fontSize="2.5rem"
-                      lineHeight="shorter"
+                      pos="relative"
+                      textAlign="center"
+                      fontWeight="thin"
+                      fontFamily='"Montserrat", "Helvetica", Arial, sans-serif'
                     >
-                      Mikail's Music & Projects
-                    </Box>
-                    <Box
-                      marginTop="20px"
-                      fontSize="xl"
-                    >
-                      Prod. Mikail
+                      <Box
+                        marginTop="30px"
+                        marginBottom="20px"
+                        fontSize="2.5rem"
+                        lineHeight="shorter"
+                      >
+                        Mikail's Music & Projects
+                      </Box>
+                      <Box
+                        marginTop="20px"
+                        fontSize="xl"
+                      >
+                        Prod. Mikail
+                      </Box>
                     </Box>
                   </Box>
                 </Box>
               </Box>
+
+              <SectionHeader title={"Featured Music"}/>
+                {carouselSections}
+              <Projects enabled={false}/>
+
+              <Box paddingTop={"40px"}/>
             </Box>
-
-            <SectionHeader title={"Featured Music"}/>
-              {carouselSections}
-            <Projects enabled={false}/>
-
-            <Box paddingTop={"40px"}/>
           </Box>
-        </Box>
-      </DarkMode>
-    </ChakraProvider>
+      </Box>
   );
+}
+
+function App() {
+  return (
+      <ChakraProvider theme={customTheme}>
+        <DarkMode>
+          <Router>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/tone" element={<ToneExperiment />} />
+            </Routes>
+          </Router>
+        </DarkMode>
+      </ChakraProvider>
+  )
 }
 
 export default App;
