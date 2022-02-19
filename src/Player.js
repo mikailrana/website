@@ -204,12 +204,16 @@ export class AudioPlayer  {
       // reset visualization
       this.loading = false;
       this.playing = false;
-      if (this.playerStateCallback !== undefined) {
-        this.playerStateCallback("stopped",this.currentSongId,this.currentSongInfo)
-      }
+      let currentSongId = this.currentSongId;
+      let currentSongInfo = this.currentSongInfo;
+
       this.currentSongURL = undefined;
       this.currentSongId  = undefined;
       this.currentSongInfo = undefined;
+
+      if (this.playerStateCallback !== undefined) {
+        this.playerStateCallback("stopped",currentSongId,currentSongInfo)
+      }
     }
     else {
       console.log({current:this.source, source})
@@ -220,7 +224,6 @@ export class AudioPlayer  {
     if (!this.enableAudioContext || this.decodeAudioBroken) {
       return (
         <audio
-          id = {this.audioPlaysCounter}
           controls={false}
           loop={false}
           autoPlay={true}
