@@ -12,13 +12,29 @@ import {CircleViz} from "./Viz";
 import {isMobileBrowser} from './Utils'
 import {SectionHeader,SectionCategory,MusicCarousel, Projects, MusicTile} from './Components';
 import {canvasWidth} from './Constants';
+import { initializeApp } from 'firebase/app';
+import { getFirestore ,collection, getDocs } from "firebase/firestore";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDQorlDZYTdtlhuHkQ1H3iK60R5ykdLVMU",
+  authDomain: "mikmusic-8c7e3.firebaseapp.com",
+  databaseURL: "https://mikmusic-8c7e3.firebaseio.com",
+  projectId: "mikmusic-8c7e3",
+  storageBucket: "mikmusic-8c7e3.appspot.com",
+  messagingSenderId: "654093933741",
+  appId: "1:654093933741:web:f0642ac76673d86a40fa24",
+  measurementId: "G-6BSKPCYWMY"
+};
+
+// Initialize Firebase
+const firebase_app = initializeApp(firebaseConfig);
+const firestore = getFirestore(firebase_app);
+
 
 const config = {
   initialColorMode: "light",
   useSystemColorMode: false,
 }
-
-let firebase = require("firebase/firebase") ;
 
 
 
@@ -152,10 +168,10 @@ function App() {
   /** if songs (state) is undefined, then make a call to firestore to get list of latest songs **/
   if (songsAndCategories === undefined) {
     // get a collection ref to the music2 collection in firestore
-    var musicCollectionRef = firebase.firestore().collection("music2");
+    var musicCollectionRef = collection(firestore,"music2");
     // call the ref's get method (which returns a promise)
     // attach a promise handler (when server call completes asynchronously)
-    musicCollectionRef.get().then(
+    getDocs(musicCollectionRef).then(
       // callback function invoked by promise (takes querySnapshot object)
       (querySnapshot) => {
         // declare a temporary music array
